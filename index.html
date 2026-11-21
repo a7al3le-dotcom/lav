@@ -1,467 +1,1185 @@
 <!DOCTYPE html>
-<html lang="ar" style="height:100%;">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=400, maximum-scale=1, user-scalable=no">
-<meta name="HandheldFriendly" content="True">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="google" content="notranslate">
-<title></title>
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="preload" href="prv1.png" as="image" type="image/png">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.5.0/css/font-awesome.min.css">
-<link rel="stylesheet" href="css/al3nood.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08090c">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="لاف - غرفة دردشة لحظية">
+<title>لاف</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2308090c'/%3E%3Cpath d='M8 10h16v10H14l-5 4v-4H8z' fill='%23f5b942'/%3E%3C/svg%3E">
+<!-- اتصالات مبكرة: تختصر وقت أول تحميل -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://copapp-ba4aa-default-rtdb.firebaseio.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#08090c;--panel:#101319;--panel-2:#0d1015;
+  --gold:#f5b942;--gold-soft:#ffcf70;--gold-dark:#6f4a12;
+  --border:#262b34;--border-soft:#1b2028;
+  --text:#f2f3f5;--text-soft:#a8adb7;--muted:#8f96a3;--placeholder:#7a818c;
+  --green:#45d483;--red:#ff7885;
+  --shadow:0 12px 35px rgba(0,0,0,.35);
+  --font:"Tajawal",Arial,sans-serif;--mono:"Share Tech Mono","Tajawal",monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;background:var(--bg);color:var(--text);overflow:hidden}
+body{position:fixed;inset:0;font-family:var(--font);overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+button,input,textarea{font:inherit;color:inherit}
+button{-webkit-appearance:none;appearance:none}
+
+#app{position:relative;display:flex;flex-direction:column;width:100%;height:100dvh;overflow:hidden;
+  background:radial-gradient(circle at 50% -15%,rgba(245,185,66,.055),transparent 32%),linear-gradient(180deg,#0b0d11 0%,#08090c 45%,#07080b 100%)}
+/* شبكة خلفية ثابتة: تُرسم مرة واحدة ولا تتحرك مع التمرير */
+#app::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.22;
+  background:linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 75%);-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.45),transparent 75%)}
+
+/* ===== الرسائل ===== */
+#messages{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:62px 14px 12px;
+  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent;contain:strict}
+#messages::-webkit-scrollbar{width:5px}
+#messages::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:10px}
+.msg{display:flex;align-items:baseline;gap:8px;margin:3px 0;padding:3px 5px;direction:ltr;text-align:left;
+  font-family:var(--mono);font-size:13px;line-height:1.55;overflow-wrap:anywhere;word-break:break-word;contain:content}
+.msg .user{flex:0 0 auto;color:var(--gold-soft);font-weight:700;direction:rtl;unicode-bidi:plaintext}
+.msg .user[role=button]{cursor:pointer;border-radius:4px}
+.msg .user[role=button]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.msg .text{flex:1 1 auto;min-width:0;unicode-bidi:plaintext;white-space:pre-wrap}
+.msg .time{flex:0 0 auto;margin-left:auto;color:var(--muted);font-size:10px;white-space:nowrap}
+.msg.pending{opacity:.7}
+.msg .share{display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;padding:6px 10px;border:1px solid rgba(245,185,66,.35);
+  border-radius:10px;background:rgba(245,185,66,.06);direction:rtl;font-family:var(--font);white-space:normal;vertical-align:middle}
+.msg .share-t{min-width:0;color:var(--gold-soft);font-size:12px;overflow-wrap:anywhere}
+.msg .share-go{flex:0 0 auto;height:30px;padding:0 12px;border:1px solid rgba(245,185,66,.6);border-radius:9px;cursor:pointer;
+  background:linear-gradient(180deg,#dca53b,#b97918);color:#171107;font:700 12px/1 var(--font)}
+.msg .share-go:focus-visible{outline:2px solid var(--gold-soft);outline-offset:2px}
+.ico.plus{font:700 17px/1 Arial,sans-serif}
+.msg .pic{display:block;width:auto;height:auto;max-width:min(260px,100%);max-height:280px;margin-top:4px;border:1px solid var(--border);
+  border-radius:10px;background:#151920;cursor:zoom-in;object-fit:contain}
+.msg .pic:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.msg .pic.broken{min-width:120px;min-height:40px;cursor:default;color:var(--muted);font-size:11px}
+.icon-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn:disabled{opacity:.45;cursor:wait}
+#viewer{width:auto;max-width:100vw;max-height:100dvh;padding:0;border:0;background:transparent;box-shadow:none}
+#viewer::backdrop{background:rgba(0,0,0,.88)}
+#viewer img{display:block;max-width:96vw;max-height:92dvh;border-radius:8px;cursor:zoom-out}
+.sys{width:fit-content;max-width:95%;margin:8px auto;padding:6px 12px;border:1px solid rgba(245,185,66,.24);border-radius:10px;
+  color:var(--gold-soft);background:rgba(245,185,66,.045);font-family:var(--font);font-size:11px;text-align:center;direction:rtl;
+  overflow-wrap:anywhere;transition:opacity .5s ease}
+.sys.out{opacity:0}
+
+/* ===== مؤشر الكتابة ===== */
+#typing{position:relative;z-index:3;flex-shrink:0;min-height:25px;padding:2px 16px;line-height:21px;font-size:11px;color:var(--gold);
+  background:rgba(13,15,19,.94);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;visibility:hidden}
+#typing.on{visibility:visible}
+
+/* ===== منطقة الإدخال ===== */
+/* المقاسات من chat-new: #room-composer ارتفاعه 42 وحشوته 4، والعناصر بينها 2px */
+#composer{position:relative;z-index:10;display:flex;align-items:center;gap:2px;flex-shrink:0;height:calc(42px + env(safe-area-inset-bottom));
+  padding:4px 4px calc(4px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(13,15,19,.96),rgba(8,9,12,.99))}
+/* #tbox في chat-new: ارتفاع ثابت 32، حشوة 6، زاوية 2، خط 15.2 عريض؛ النص الطويل يلتف داخله ويبقى سطر الكتابة ظاهرًا */
+#input{display:block;flex:1 1 auto;min-width:0;height:32px;min-height:32px;max-height:32px;padding:7px 11px;border:1px solid var(--border);border-radius:12px;outline:none;
+  background:#0d1015;font-family:var(--mono);font-size:13px;line-height:1.3;font-weight:400;transition:border-color .2s;
+  resize:none;overflow:hidden;text-align:start;unicode-bidi:plaintext;overflow-wrap:anywhere}
+#input:hover{border-color:#323842}
+#input:focus{background:#101319;border-color:rgba(245,185,66,.55)}
+#input::placeholder{color:var(--placeholder);opacity:1}
+/* أزرار الصندوق (إرسال، إيموجي، صورة) بشكل واحد: ارتفاع 32 كالصندوق، زاوية 2، إطار ذهبي خفيف */
+#send,.icon-btn{height:32px;border:1px solid rgba(245,185,66,.45);border-radius:12px;outline:none;cursor:pointer;
+  background:linear-gradient(180deg,#151920,#0e1116);color:var(--gold);line-height:1;
+  touch-action:manipulation;transition:border-color .2s,color .2s,transform .15s}
+#send:hover,#send:focus-visible,.icon-btn:hover,.icon-btn:focus-visible{border-color:rgba(245,185,66,.8);color:var(--gold-soft)}
+#send:active,.icon-btn:active{transform:scale(.97)}
+.icon-btn{flex:0 0 32px;width:32px;padding:0;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:18px}
+#send{flex:0 0 32px;width:32px;padding:0;display:grid;place-items:center;font-family:Arial,sans-serif;font-size:16px}
+
+/* ===== لوحة الإيموجي (تُحمَّل عند أول استخدام) ===== */
+/* الموضع يُحسب بالـJS ليظهر فوق زر الإيموجي مباشرة ولا يخرج عن الشاشة */
+#emojiWrap{position:fixed;z-index:1001;left:8px;bottom:80px;width:min(360px,calc(100vw - 16px));height:390px;display:none;
+  border-radius:16px;box-shadow:0 18px 38px rgba(0,0,0,.45);background:var(--panel);--arrow-x:50%}
+#emojiWrap.on{display:block}
+/* سهم صغير يشير إلى الزر */
+#emojiWrap::after{content:"";position:absolute;top:100%;left:var(--arrow-x);width:12px;height:12px;margin:-7px 0 0 -6px;
+  background:#101319;border-right:1px solid #2a303a;border-bottom:1px solid #2a303a;transform:rotate(45deg);pointer-events:none}
+#emojiWrap .loading{display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px}
+emoji-picker{width:100%;height:100%;--background:#101319;--border-color:#2a303a;--border-radius:16px;--button-active-background:#27200f;
+  --button-hover-background:#1d1f25;--input-background:#0b0d11;--input-border-color:#2a303a;--input-font-family:var(--font);
+  --input-placeholder-color:#8f96a3;--outline-color:rgba(245,185,66,.65);--num-columns:8;--indicator-color:#f5b942;
+  --category-font-family:var(--font);--font-family:var(--font)}
+
+/* ===== المتصلون ===== */
+#topBar{position:fixed;top:10px;right:10px;z-index:1000;display:flex;align-items:center;gap:2px}
+/* أزرار الأعلى بنفس شكل ومقاس أزرار الكتابة: ارتفاع 32، زاوية 2، إطار ذهبي خفيف، ملتصقة بفاصل 2px */
+#onlineBtn,#tvBtn,#linkBtn{display:flex;align-items:center;justify-content:center;gap:4px;height:32px;min-width:32px;padding:0;border:1px solid rgba(245,185,66,.45);
+  border-radius:12px;background:linear-gradient(180deg,#151920,#0e1116);color:var(--gold);font-size:13px;line-height:1;cursor:pointer;
+  box-shadow:0 8px 25px rgba(0,0,0,.28);touch-action:manipulation;transition:border-color .2s,color .2s}
+#onlineBtn{padding:0 7px}
+#onlineBtn:hover,#onlineBtn:focus-visible,#tvBtn:hover,#tvBtn:focus-visible,#linkBtn:hover,#linkBtn:focus-visible{border-color:rgba(245,185,66,.8);color:var(--gold-soft);outline:none}
+#onlineBtn[aria-expanded=true],#tvBtn[aria-expanded=true],#linkBtn[aria-expanded=true]{border-color:rgba(245,185,66,.8)}
+#topBar .ico{width:18px;height:18px;border:0;border-radius:0;background:none}
+#topBar .ico svg{width:18px;height:18px}
+#topBar .ico.plus{font-size:20px}
+.ico{width:20px;height:20px;display:grid;place-items:center;flex:0 0 auto;border:1px solid rgba(245,185,66,.22);border-radius:7px;
+  background:rgba(245,185,66,.08);color:var(--gold)}
+.ico svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#count{color:var(--gold-soft);font-weight:700;font-variant-numeric:tabular-nums}
+#usersBox{position:fixed;top:48px;right:10px;z-index:999;min-width:190px;max-width:min(290px,calc(100vw - 16px));padding:10px;border:1px solid var(--border);
+  border-radius:16px;background:linear-gradient(180deg,#141820,#0c0e13);box-shadow:var(--shadow);display:none}
+#usersBox.on{display:block}
+#usersBox h2{display:flex;align-items:center;gap:8px;margin:0 0 8px;padding:7px 8px 9px;border-bottom:1px solid var(--border-soft);font-size:13px}
+#usersBox h2 .ico{width:26px;height:26px;border-radius:8px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:#48e27a;margin-inline-start:auto}
+#usersList{max-height:225px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent}
+.u{display:flex;align-items:center;gap:8px;width:100%;padding:8px 7px;border:0;border-bottom:1px solid rgba(255,255,255,.035);border-radius:9px;
+  background:none;font-size:12px;text-align:start;color:var(--text-soft)}
+.u:last-child{border-bottom:0}
+button.u{cursor:pointer}
+button.u:hover,button.u:focus-visible{background:rgba(255,255,255,.04);outline:none}
+.u .dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--green)}
+.u .who{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.u .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.u .flag{width:16px;height:16px;flex:0 0 16px;object-fit:contain}
+.u .noflag{width:16px;flex:0 0 16px;text-align:center;font-size:12px;opacity:.55}
+
+/* ===== حالة الاتصال ===== */
+#status{position:fixed;bottom:56px;left:50%;z-index:999;display:none;transform:translateX(-50%);padding:7px 15px;border:1px solid var(--border);
+  border-radius:10px;background:rgba(16,19,25,.97);font-size:11px;font-weight:700;white-space:nowrap;box-shadow:var(--shadow)}
+#status.on{display:block}
+#status.online{color:#69d99a}
+#status.offline{color:var(--red)}
+
+/* ===== نافذة تغيير الاسم ===== */
+dialog{width:min(320px,calc(100vw - 32px));padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog label{display:block;margin-bottom:10px;font-size:13px;font-weight:700}
+dialog input{width:100%;height:42px;padding:7px 12px;border:1px solid var(--border);border-radius:12px;background:#0b0d11;font-size:16px;outline:none}
+dialog input:focus{border-color:rgba(245,185,66,.55)}
+.dlg-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.dlg-actions button{height:38px;padding:0 16px;border-radius:11px;border:1px solid var(--border);background:#151920;cursor:pointer;font-size:13px}
+.dlg-actions .primary{border-color:rgba(245,185,66,.55);background:linear-gradient(180deg,#dca53b,#b97918);color:#171107;font-weight:700}
+
+/* ===== الشاشات ===== */
+@media(max-width:768px){
+  #messages{padding:58px 9px 10px}.msg{gap:6px;padding:3px}.msg .time{font-size:9px}
+  #topBar{top:8px;right:8px}#usersBox{top:46px;right:8px}#typing{padding:2px 10px}
+}
+@media(max-width:480px){
+}
+@media(max-width:360px){
+  #messages{padding-left:7px;padding-right:7px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
 </head>
-<body class="bg" style="background-color:#40404f;height:100%;max-height:100%;min-height:100%;margin:0;padding:0;overflow:hidden;">
-<div style="width:100%;height:100%;max-height:100%;max-width:394px;padding:0;" class="center-block bg dad" role="main">
-
-  <!-- ===== صفحة الدخول ===== -->
-  <div id="tlogins" class="border light fr break c-flex" style="z-index:1000;margin-left:-4px;height:100%;width:100%;max-width:390px;min-height:100%;">
-    <div style="width:100%;display:block;">
-      <a href="./" class="label bg d-flex fl" style="width:100%;padding:6px;border-radius:0;text-align:left;">
-        <img src="prv1.png" alt="" width="24" height="24" class="fl sprv1" style="margin-right:2px;">
-        <span class="flex-grow-1 dots sitename"></span>
-        <span class="btn fr btn-success fa fa-refresh" style="margin:0;margin-top:-2px;width:39px;"></span>
-      </a>
-      <div id="bnr" style="width:100%;"></div>
-      <ul class="nav nav-tabs fl" style="margin:0;background-color:white;height:44px;width:100%;">
-        <li class="active"><a data-toggle="tab" style="padding:10px 6px;" class="fa fa-user" href="#l1">دخول الزوار</a></li>
-        <li><a data-toggle="tab" style="padding:10px 6px;" class="fa fa-user" href="#l2">دخول الاعضاء</a></li>
-        <li><a data-toggle="tab" style="padding:10px 6px;" class="fa fa-user-plus" href="#l3"> تسجيل عضويه</a></li>
-      </ul>
-      <div style="width:100%;height:74px;" class="tab-content fl">
-        <div id="l1" style="padding:4px;width:100%;" class="tab-pane in active">
-          <input style="width:206px;margin-top:33px;padding:5px;border-radius:2px;height:33px;" autocomplete="off" type="search" class="border corner" id="u1" placeholder="أكتب الاسم المستعار">
-          <button style="margin-top:1px;" data-login="1" class="btn btn-primary">دخول</button>
-        </div>
-        <div id="l2" style="padding:4px;width:100%;" class="tab-pane">
-          <input style="width:206px;padding:5px;border-radius:2px;height:33px;" id="u2" class="border corner" placeholder="اكتب اسم العضو" autocomplete="username">
-          <input style="width:206px;padding:5px;border-radius:2px;height:33px;" id="pass1" class="border corner" type="password" placeholder="اكتب كلمه المرور" autocomplete="current-password">
-          <button data-login="2" class="btn btn-primary">دخول</button>
-          <span id="stealthbtn" style="color:black;padding:4px;margin:2px;border-radius:4px;" class="btn fr fa fa-eye"></span>
-          <input style="display:none;" id="stealth" type="checkbox">
-        </div>
-        <div id="l3" style="padding:4px;width:100%;" class="tab-pane">
-          <input style="width:206px;padding:5px;border-radius:2px;height:33px;" id="u3" class="border corner" placeholder="اكتب اسم العضو" autocomplete="off">
-          <input style="width:206px;padding:5px;border-radius:2px;height:33px;" id="pass2" class="border corner" type="password" placeholder="اكتب كلمه المرور" autocomplete="new-password">
-          <button data-login="3" class="btn btn-primary">دخول</button>
-        </div>
-      </div>
-      <div class="bg mini fl" style="width:100%;border-radius:0;padding:0;height:25px;">
-        <label id="loginstat" class="fl label label-warning loginstat" style="border-radius:1px;margin:0;height:25px;min-width:120px;">يتم الاتصال ..</label>
-        <span id="s1" class="s1 fr fa fa-user label badgex label-success" style="border-radius:0;min-width:38px;height:25px;">0</span>
-      </div>
-    </div>
-    <div id="lonline" class="lonline light break flex-grow-1" style="width:100%;outline:lightgray solid 1px;padding-left:1px;background-color:#fafafa;"></div>
-    <div class="fr borderg minix cop" style="padding:2px;background-color:white;z-index:1;color:#5f6b7a;font-size:small!important;height:22px;">Copyright © <span class="sitename"></span>. All Rights Reserved</div>
+<body>
+<div id="app">
+  <div id="topBar">
+  <button type="button" id="onlineBtn" aria-expanded="false" aria-controls="usersBox" title="المتصلون الآن">
+    <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-3.2 2.3-5 5.5-5s5 1.8 5.5 5"/><path d="M15 6.5a2.6 2.6 0 1 1 0 5.1"/><path d="M16 14.2c2.7.4 4.2 2 4.5 4.8"/></svg></span>
+    <span id="count">0</span>
+  </button>
+  <button type="button" id="tvBtn" aria-expanded="false" aria-controls="tvPanel" aria-label="التلفاز" title="التلفاز">
+    <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M8 3l4 4 4-4"/></svg></span>
+  </button>
+  <button type="button" id="linkBtn" aria-expanded="false" aria-controls="tvPanel" aria-label="مشاركة رابط بث أو فيديو" title="مشاركة رابط بث أو فيديو">
+    <span class="ico plus" aria-hidden="true">+</span>
+  </button>
   </div>
+  <div id="usersBox">
+    <h2><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.5-3.2 2.3-5 5.5-5s5 1.8 5.5 5"/><path d="M15 6.5a2.6 2.6 0 1 1 0 5.1"/><path d="M16 14.2c2.7.4 4.2 2 4.5 4.8"/></svg></span><span>المتصلون الآن</span><span class="live-dot" aria-hidden="true"></span></h2>
+    <div id="usersList"></div>
+  </div>
+
+  <div id="messages" role="log" aria-live="polite" aria-label="الرسائل"></div>
+  <div id="status" role="status"></div>
+  <div id="typing" aria-live="polite"></div>
+
+  <form id="composer" autocomplete="off">
+    <button type="submit" id="send" aria-label="إرسال" title="إرسال"><span aria-hidden="true">➤</span></button>
+    <textarea id="input" rows="1" dir="auto" placeholder="اكتب رسالتك..." maxlength="1000" enterkeyhint="send" autocorrect="off" autocapitalize="sentences" spellcheck="true" aria-label="حقل إدخال الرسالة"></textarea>
+    <button type="button" id="emojiBtn" class="icon-btn" aria-label="فتح لوحة الإيموجي" aria-expanded="false" aria-controls="emojiWrap" title="الإيموجي"><span aria-hidden="true">☺</span></button>
+    <button type="button" id="picBtn" class="icon-btn" aria-label="إرسال صورة" title="إرسال صورة"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></svg></button>
+    <input type="file" id="picInput" accept="image/*" hidden>
+  </form>
+  <div id="emojiWrap"><div class="loading">جاري تحميل الإيموجي…</div></div>
 </div>
 
-  <!-- ===== الغرفة ===== -->
-  <div id="room" style="height:100%;width:100%;display:none;" class="break c-flex fr">
-    <div id="mic" style="width:100%;border:none;padding:2px;height:54px;display:none;" class="nosel bg"></div>
-    <div id="d2" class="d2 flex-grow-1 light break"></div>
-    <div class="tablebox d-flex footer fl light" style="width:100%;height:42px;padding:4px;flex:0 0 auto;">
-      <button id="rleave" style="margin-left:-2px;margin-top:2px;border-radius:2px;" class="fa fa-sign-out fl btn btn-primary">&nbsp;</button>
-      <img role="button" class="fl nosel emobox" style="padding:5px;width:34px;height:34px;" src="imgs/emoii.gif" alt="">
-      <textarea id="tbox" placeholder="اكتب رسالتك هنا" class="fl tbox flex-fill"></textarea>
-      <button id="tsend" style="margin-left:2px;" class="fa fa-send fl btn btn-primary">إرسال</button>
-    </div>
-    <div id="d0" class="nosel fl bg" style="padding-left:1px;margin-top:1px;width:100%;flex:0 0 auto;">
-      <button title="المتواجدين" data-target="#users" class="ae fa label label-primary fa-user" style="width:18%;"><span id="busers" style="padding:1px 4px;"></span></button>
-      <button title="المحادثات الخاصه" data-target="#chats" class="ae fa chats label label-primary fa-comment" style="width:21%;" id="pmb"><span style="padding:1px 4px;"></span>خاص</button>
-      <button title="غرف الدردشه" id="brooms" data-target="#rooms" class="ae fa label label-primary fa-users" style="width:19%;"><span style="padding:1px 4px;"></span>الغرف</button>
-      <button title="الحائط" data-target="#wall" class="ae fa label label-primary fa-commenting"><span id="bwall" style="padding:1px 4px;"></span>الحائط</button>
-      <button title="الإعدادات" data-target="#settings" class="ae label label-primary fa fa-gear" style="width:18%;"><span style="padding:1px 4px;"></span>الضبط</button>
-    </div>
-  </div>
+<dialog id="viewer" aria-label="عرض الصورة"><img id="viewerImg" alt="صورة مكبّرة"></dialog>
 
-  <!-- ===== اللوحة الجانبية ===== -->
-  <div id="dpnl" class="dpnl bg tab-content c-flex" style="display:none;border:1px solid;max-width:340px;min-width:300px;top:0;right:0;">
-    <div style="width:100%;flex:0 0 auto;">
-      <label id="dpnlclose" class="label label-danger border nosel fa fa-close fr" style="margin-bottom:0;margin-right:2px;border:1px solid black;border-radius:6px;padding:6px 8px;">&nbsp;</label>
-      <label class="fl nosel label pnhead" style="margin:3px;padding-left:10px;padding-right:10px;">المتواجدين</label>
+<dialog id="nameDlg">
+  <form id="nameForm">
+    <label for="nameInput">اسمك الجديد</label>
+    <input id="nameInput" maxlength="20" required autocomplete="nickname">
+    <div class="dlg-actions">
+      <button type="button" id="nameCancel">إلغاء</button>
+      <button type="submit" class="primary">حفظ</button>
     </div>
-    <div id="users" style="height:100%;width:100%;" class="light break tab-pane active">
-      <textarea id="usearch" placeholder=".. البحث" class="tbox bg border" style="width:100%;padding-left:5px;display:block;border-radius:0;"></textarea>
-      <div id="uin"></div>
-      <label style="margin:0!important;width:100%;border:none;padding:4px;border-radius:0;display:none;" class="nosel ninr fl uzr label bg">المتواجدين في الدردشه</label>
-      <div id="uout"></div>
-    </div>
-    <div id="chats" style="height:100%;width:100%;" class="break light tab-pane"></div>
-    <div id="wall" style="height:100%;width:100%;" class="break tab-pane">
-      <div style="width:100%;height:100%;" class="c-flex">
-        <div id="d2bc" class="d2 light d2bc flex-grow-1 break" style="width:100%;padding-top:1px;">
-          <button class="fa fa-comments btn border btn-info" style="display:none;position:absolute;top:32px;z-index:1;left:50px;width:70%;text-align:center;" id="bcmore">رسائل جديدة</button>
-        </div>
-        <div class="tablebox light d-flex" style="width:100%;height:42px;padding:4px;flex:0 0 auto;">
-          <button style="margin-left:2px;margin-right:3px;margin-top:2px;border-radius:2px;" class="fr fa fa-share-alt sndfilebc fl btn btn-primary"></button>
-          <button id="ytSearchBtn" title="البحث في اليوتيوب" style="margin-left:2px;margin-right:2px;margin-top:2px;border-radius:2px;background:#ff0000;border-color:#cc0000;color:#fff;" class="fa fa-youtube-play fl btn"></button>
-          <img role="button" class="fl emobox" style="padding:5px;width:34px;height:34px;" src="imgs/emoii.gif" alt="">
-          <textarea placeholder="اكتب رسالتك هنا" class="fl tbox tboxbc flex-fill"></textarea>
-          <button style="margin-left:2px;" class="fa fa-send sndbc fl btn btn-primary">إرسال</button>
-        </div>
-      </div>
-    </div>
-    <div id="rooms" style="height:100%;width:100%;" class="light break tab-pane">
-      <div style="width:100%;margin:0;border:none;border-radius:0;" class="nosel label-primary fl bgg">
-        <button id="mkroom" class="border btn label label-success fl fa fa-plus" style="margin:1px;">غرفه جديدة</button>
-      </div>
-      <div id="rlist"></div>
-    </div>
-    <div id="settings" style="height:100%;width:100%;padding:0;" class="break light tab-pane">
-      <div class="borderg corner" style="background-color:white;width:100%;margin-top:-2px;">
-        <div style="display:inline-block;width:132px;margin-top:2px;height:25px;padding:1px;" class="label label-primary">الزخرفه</div>
-        <br><input class="stopic dots" style="width:99%;">
-        <br><div style="display:inline-block;width:132px;margin-top:1px;height:25px;padding:1px;" class="label label-primary">الحاله</div>
-        <br><input class="smsg dots" style="width:99%;">
-        <br><div class="label label-primary" style="display:inline-block;width:132px;margin-top:1px;height:25px;padding:1px;">لون الإسم</div>
-        <div class="cpick border scolor btn" style="width:64px;height:22px;background-image:none;background-color:#fff;"></div>
-        <br><div class="label label-primary" style="display:inline-block;width:132px;margin-top:1px;height:25px;padding:1px;">لون الخط</div>
-        <div class="cpick border mcolor btn" style="width:64px;height:22px;background-image:none;background-color:#fff;"></div>
-        <br><div class="label label-primary" style="display:inline-block;width:132px;margin-top:1px;height:25px;padding:1px;">لون الخلفيه</div>
-        <div class="cpick border sbg btn" style="width:64px;height:22px;background-image:none;background-color:#fff;"></div>
-        <button id="setprofile" class="border btn mini btn-success hand fl" style="padding:6px;width:98%;margin-left:3px;margin-top:2px;margin-bottom:4px;"><span class="fl fa fa-edit"></span> حـفـظ</button>
-      </div>
-      <select id="zoom" style="width:98%;margin:2px 4px;" class="fl btn btn-primary">
-        <option value="1">%100 - حجم الخطوط</option>
-        <option value="1.20">%120 - حجم الخطوط</option>
-        <option value="1.10">%110 - حجم الخطوط</option>
-        <option value="1.05">%105 - حجم الخطوط</option>
-        <option value="0.95">%95 - حجم الخطوط</option>
-        <option value="0.9">%90 - حجم الخطوط</option>
-      </select>
-      <select id="turn_server" style="width:98%;margin:2px 4px;" class="fl btn btn-primary">
-        <option value="1">السيرفر الصوتي: الاساسي</option>
-        <option value="2">السيرفر الصوتي: TCP</option>
-        <option value="3">السيرفر الصوتي: UDP</option>
-        <option value="4">السيرفر الصوتي: TCP+Relay</option>
-        <option value="5">السيرفر الصوتي: UDP+Relay</option>
-        <option value="6">السيرفر الصوتي: openrelay</option>
-      </select>
-      <select id="turn_bitrate" style="width:98%;margin:2px 4px;" class="fl btn btn-primary">
-        <option value="24">جودة المايك: الاساسيه</option>
-        <option value="8">جودة المايك: ضعيفه</option>
-        <option value="16">جودة المايك: متوسطه</option>
-        <option value="64">جودة المايك: عاليه</option>
-      </select>
-      <label id="changepic" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;" class="label changepic tc border btn label-info fl"><img style="width:32px;height:32px;margin:-8px;" class="fitimg fl borderg spic corner hand" src="pic.png" alt="">تغير الصوره</label>
-      <label id="delpic" style="color:black;margin:2px 4px;padding:8px;width:98%;" class="label tc border btn label-danger fl"><span class="fl fa fa-user-times"></span>حذف الصوره</label>
-      <label id="nopm" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;" class="label tc border btn fl"><span class="fa fl"></span>تعطيل المحادثات الخاصه</label>
-      <br>
-      <label id="nonot" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;" class="label tc border btn bb4 fl"><span class="fa fl"></span>تعطيل التنبيهات</label>
-      <br>
-      <label id="pmsg" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;display:none;" class="label tc border pmsg btn label-info fl"><span class="fl fa fa-send"></span>إرسال إعلان</label>
-      <br>
-      <label id="redit" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;display:none;" class="label tc border redit btn label-info fl"><span class="fl fa fa-home"></span>إداره الغرفه</label>
-      <br>
-      <a href="cp.html" target="_blank" id="cplink" style="background-color:ghostwhite;color:black;margin:2px 4px;padding:8px;width:98%;display:none;" class="label tc border cp btn label-danger fl"><span class="fl fa fa-star"></span>لوحه التحكم</a>
-      <br>
-      <label id="logout" style="margin:2px 4px;padding:8px;width:98%;" class="label border btn label-danger tc fl"><span class="fl fa fa-sign-out"></span>تسجيل خروج</label>
-    </div>
-  </div>
+  </form>
+</dialog>
 
-<!-- ===== يوتيوب ===== -->
-<div class="modal" id="ytModal" role="dialog" style="z-index:2150;">
-  <div class="modal-dialog">
-    <div class="modal-content" style="width:310px;">
-      <div style="color:white;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;" class="mini fa fa-youtube-play modal-title"> ارسل مقطع الى الحائط</label>
-      </div>
-      <div class="modal-body" style="padding:1px;">
-        <div class="break" style="background-color:#efefef;padding:5px;">
-          <input id="ytSearchInput" type="text" class="border corner" placeholder="...البحث في اليوتيوب" autocomplete="off" style="width:100%;height:33px;padding:5px;border-radius:2px;margin-bottom:4px;">
-          <div id="ytResults" class="break" style="max-height:340px;overflow-y:auto;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+<script type="module">
+/* ================= الإعدادات ================= */
+const FB = "https://www.gstatic.com/firebasejs/10.12.2/";
+const EMOJI = "https://cdn.jsdelivr.net/npm/emoji-picker-element@1.29.1/";
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC-zyY5erMWU4z11Dp6I_F9M7Ckid5Tp1U",
+  authDomain: "copapp-ba4aa.firebaseapp.com",
+  databaseURL: "https://copapp-ba4aa-default-rtdb.firebaseio.com",
+  projectId: "copapp-ba4aa",
+  storageBucket: "copapp-ba4aa.firebasestorage.app",
+  messagingSenderId: "407195747473",
+  appId: "1:407195747473:web:ab56033e14f68b78b06b30"
+};
+const C = {
+  MSG_MAX: 1000, NAME_MAX: 20, VISIBLE: 50,
+  TYPING_IDLE: 2000,        // يتوقف مؤشر الكتابة بعد ثانيتين بلا كتابة
+  TYPING_REFRESH: 4000,     // تحديث المؤشر في القاعدة كل 4 ثوانٍ كحد أقصى (بدل كل حرف)
+  TYPING_STALE: 10000,
+  INACTIVE: 120000,         // المستخدم يُعتبر غير نشط بعد دقيقتين
+  TICK: 10000,              // مؤقّت واحد لكل المهام الدورية
+  HIDDEN_DISCONNECT: 300000,// قطع الاتصال بعد 5 دقائق في الخلفية لتوفير البطارية
+  RESUME_RECONNECT: 5000,   // إذا غابت الصفحة أكثر من 5 ثوانٍ نجدد الاتصال عند الرجوع
+  GEO_TTL: 86400000,        // تُحفظ الدولة محليًا 24 ساعة (طلب واحد يوميًا فقط)
+  PIC_SIDE: 1024,           // أطول ضلع للصورة بعد التصغير
+  PIC_TARGET: 150000,       // الحجم المستهدف (حرف base64 ≈ 110KB)
+  PIC_MAX: 200000,          // الحد الأقصى المقبول في القاعدة
+  FILE_MAX: 25 * 1024 * 1024,
+  KEEP_HOURS: 48,           // مدة بقاء الرسائل والصور (يجب أن تطابق الرقم في القواعد)
+  CLEAN_EVERY: 3600000,     // كل جهاز ينظف مرة كل ساعة كحد أقصى
+  CLEAN_DELAY: 20000,       // يبدأ التنظيف بعد 20 ثانية من الاتصال (لا يزاحم التحميل)
+  CLEAN_BATCH: 100,
+  ONLINE_STALE: 3600000,    // حضور عالق منذ ساعة = يُحذف
+  TYPING_STALE_DEL: 600000, // مؤشر كتابة عالق منذ 10 دقائق = يُحذف
+  ACK_TIMEOUT: 8000,        // إذا لم يؤكد الخادم كتابة خلال 8 ثوانٍ فالاتصال ميت بصمت ← اتصال جديد
+  COOLDOWN: 700, OUTBOX_MAX: 100, MAX_TRIES: 3, SYS_MAX: 6
+};
+const KEY = { CLEAN: "chat_clean_at", GEO: "chat_geo_v1", NAME: "chat_username_v2", OUTBOX: "chat_outbox_v3", OLD_QUEUE: "chat_pending_messages_v2" };
 
-<!-- ===== ملف العضو ===== -->
-<div class="modal" id="upro" role="dialog" style="z-index:2100">
-  <div class="modal-dialog">
-    <div class="modal-content" style="width:340px;margin:-1px;">
-      <div style="color:white;margin-top:-1px;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;max-width:90%;" class="mini dots nosel modal-title"></label>
-      </div>
-      <div class="modal-body" style="padding:1px;">
-        <div class="light fl pro break" style="width:100%;border:1px solid lightgrey;padding:0;margin:0;">
-          <center>
-            <div style="width:100%;height:200px;background-size:cover;" class="fitimg fl u-pic">
-              <div style="width:100%;height:100%;" class="fitimg bgf fl u-pic u-pic2"></div>
-            </div>
-            <label style="width:100%;text-align:end;margin-bottom:0;">
-              <div style="width:100%;padding:2px;text-align:center;" class="fl u-msg"></div>
-              <div class="fl mini u-co" style="margin:4px;"></div>
-              <div class="fr u-room"></div>
-            </label>
-          </center>
-          <span class="fl fa fa-comment btn upm borderg" style="color:black;margin:2px;width:106px;text-align:center;">محادثه خاصه</span>
-          <span class="fl fa fa-envelope-o btn unot borderg" style="color:black;margin:2px;width:106px;text-align:center;">تنبيه</span>
-          <span class="fl fa fa-heart btn ulike borderg" style="margin:2px;color:red;width:106px;text-align:center;">0</span>
-          <span class="fl fa fa-microphone-slash btn uml borderg" style="color:black;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">سحب المايك</span>
-          <span class="fl fa fa-microphone-slash btn umm borderg" style="color:black;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">كتم المايك</span>
-          <span class="fl fa fa-microphone btn uma borderg" style="color:black;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">سماح</span>
-          <span class="fl fa fa-diamond btn ugift borderg" style="color:blue;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">ارسل هديه</span>
-          <span class="fl fa fa-search btn uh borderg" style="color:black;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">كشف النكات</span>
-          <span class="fl fa fa-star btn ubnr borderg" style="color:deeppink;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">البنر</span>
-          <span class="fl fa fa-ban btn udelpic borderg" style="color:maroon;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">حذف الصوره</span>
-          <span class="fl fa fa-user-times btn urkick borderg" style="color:darkorchid;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">طرد من الغرفه</span>
-          <span class="fl fa fa-star btn umod borderg" style="color:green;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">ترقيه الى مراقب</span>
-          <span class="fl fa fa-ban btn ukick borderg" style="color:crimson;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">طرد</span>
-          <span class="fl fa fa-ban btn uban borderg" style="color:crimson;margin:2px;margin-top:4px;width:106px;text-align:center;display:none;">باند</span>
-          <span class="fl fa fa-warning btn ureport borderg" style="color:black;margin:2px;margin-top:4px;width:106px;text-align:center;">تبليغ</span>
-          <span class="fl fa fa-ban btn umute borderg" style="color:red;margin:2px;margin-top:4px;width:106px;text-align:center;">تجاهل</span>
-          <span class="fl fa fa-check btn uunmute borderg" style="color:red;margin:2px;margin-top:4px;width:106px;text-align:center;">إلغاء التجاهل</span>
-          <div class="border nickbox fl" style="padding:4px;margin-top:2px;width:100%;display:none;">
-            <label class="label fl label-primary" style="height:32px;padding:8px;">الزخرفه</label>
-            <textarea class="borderg corner fl u-topic" style="height:32px;padding:4px;width:60%;resize:none;"></textarea>
-            <label class="btn btn-primary u-nickc fr fa fa-save">تغير</label>
-          </div>
-          <div class="border fl likebox" style="width:100%;padding:4px;margin-top:2px;display:none;">
-            <label style="color:red;">♥الايكات</label>
-            <input type="number" style="width:160px;" class="likec">
-            <span class="fa fr fa-check btn ulikec border" style="margin:2px;">حفظ</span>
-          </div>
-          <div class="border fl powerbox" style="width:100%;padding:4px;margin-top:2px;display:none;">
-            <label>المجموعه</label><br>
-            <input id="upsearch" style="width:200px;display:block;margin-bottom:2px;" placeholder="البحث في الصلاحيات">
-            <select style="width:200px;display:inline;" class="userpower selbox form-control"></select><br>
-            <label>المده بالأيام</label><br>
-            <input type="number" class="userdays">
-            <span class="fa fr fa-check btn upower border" style="margin:2px;">حفظ</span>
-          </div>
-          <div class="border fl roomzbox" style="width:100%;padding:4px;margin-top:2px;display:none;">
-            <label>الغرفه</label><br>
-            <select style="width:200px;display:inline;" class="roomz selbox form-control"></select><br>
-            <label>كلمه المرور(إختياري)</label><br>
-            <input type="text" class="rpwd">
-            <span class="fa fr fa-check btn uroomz border" style="margin:2px;">نقل</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+/* ================= عناصر الصفحة ================= */
+const $ = id => document.getElementById(id);
+const el = {
+  messages: $("messages"), typing: $("typing"), status: $("status"),
+  form: $("composer"), input: $("input"), send: $("send"),
+  emojiBtn: $("emojiBtn"), emojiWrap: $("emojiWrap"),
+  picBtn: $("picBtn"), picInput: $("picInput"), viewer: $("viewer"), viewerImg: $("viewerImg"),
+  onlineBtn: $("onlineBtn"), tvBtn: $("tvBtn"), linkBtn: $("linkBtn"), usersBox: $("usersBox"), usersList: $("usersList"), count: $("count"),
+  dlg: $("nameDlg"), nameForm: $("nameForm"), nameInput: $("nameInput"), nameCancel: $("nameCancel")
+};
 
-<!-- ===== القوالب ===== -->
-<x id="uhtml" style="display:none;">
-  <div class="fl hand nosel uzr uhtml">
-    <div class="d-flex fl" style="padding-right:16px;width:100%;">
-      <img class="ustat" style="width:4px;min-height:100%;max-height:62px;" alt="" src="imgs/s0.png">
-      <div class="fitimg u-pic"></div>
-      <span class="muted fa fa-ban" style="color:indianred;display:none;width:16px;margin-right:-16px;"></span>
-      <div style="padding:0 3px;overflow:hidden;" class="flex-grow-1 break">
-        <div style="width:100%;display:flex;margin-top:1px;height:21px;" class="d-flex dots">
-          <img class="u-ico" style="min-height:14px;margin-top:1px;" alt="">
-          <div class="flex-grow-1"><span style="padding-top:1px;max-width:100%;border-radius:2px;" class="u-topic"></span></div>
-        </div>
-        <div style="color:#888;padding:1px;max-height:40px;" class="mini u-msg"></div>
-      </div>
-    </div>
-    <div class="c-flex fr" style="margin-left:-32px;">
-      <img class="co ico" alt="">
-      <span class="uhash" style="color:grey;font-size:70%!important;"></span>
-    </div>
-  </div>
-</x>
+/* ================= الحالة ================= */
+const S = {
+  uid: null, name: "", connected: false, everConnected: false, paused: false, offset: 0,
+  lastSend: 0, typingOn: false, typingWrite: 0, typingTimer: 0,
+  ticker: 0, tick: 0, hiddenTimer: 0, hiddenAt: 0, offlineTimer: 0, statusTimer: 0, syncSeq: 0
+};
+const users = new Map();     // uid -> {name,lastActive}
+const typers = new Map();    // uid -> {name,ts}
+const msgs = new Map();      // key -> {row,time,ts}
+const inflight = new Set();  // مفاتيح رسائل قيد الإرسال
+let outbox = [];             // رسائل محفوظة دائمًا حتى يؤكد الخادم استلامها
+let fb = null, db = null, R = null;
 
-<x id="umsg" style="display:none;">
-  <div class="uzr d-flex mm" style="border-bottom:1px solid lavender;margin:0;width:100%;padding:0;background-color:#fafafa;padding-left:2px;">
-    <div style="min-width:52px;width:52px;height:46px;background-color:#f3f3f3;" class="fitimg u-pic borderg"></div>
-    <div class="uzr flex-fill break" style="padding-top:1px;padding-left:1px;">
-      <div style="width:100%;display:flex;height:21px;" class="d-flex">
-        <div class="d-flex flex-grow-1" style="overflow:hidden;"><img class="u-ico" style="min-height:14px;" alt="">
-          <span style="padding:1px 4px;display:block;margin-left:1px;border-radius:2px;" class="nosel u-topic dots hand"></span>
-        </div>
-        <div class="flex-grow-1 d-flex" style="height:21px;overflow-y:visible;">
-          <span class="flex-grow-1"></span>
-          <span style="padding:0 2px;margin-right:4px;color:grey;text-align:end;" class="minix tago">..</span>
-        </div>
-      </div>
-      <div style="padding:0 5px;width:100%;padding-right:1px;padding-bottom:1px;" class="u-msg break"></div>
-      <div class="reply break" style="max-height:0;"></div>
-    </div>
-  </div>
-</x>
+/* ================= أدوات ================= */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+// إزالة رموز التحكم ورموز اتجاه النص (تمنع العبث بشكل الأسماء)
+const cleanName = v => String(v ?? "").replace(/[\u0000-\u001F\u007F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "").trim().slice(0, C.NAME_MAX);
+const now = () => Date.now() + S.offset;
+const isActive = d => { const t = Number(d && d.lastActive) || 0; return t > 0 && now() - t <= C.INACTIVE; };
+const clock = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" });
+function relTime(ts) {
+  const s = Math.max(0, Math.floor((now() - ts) / 1000));
+  if (s < 5) return "الآن";
+  if (s < 60) return s + " ث";
+  const m = Math.floor(s / 60); if (m < 60) return m + " د";
+  const h = Math.floor(m / 60); if (h < 24) return h + " س";
+  return Math.floor(h / 24) + " ي";
+}
+function fatal(text) {
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;padding:20px;background:#08090c;color:#ff7885;text-align:center;white-space:pre-line;font-size:14px";
+  const p = document.createElement("p"); p.textContent = text;
+  const b = document.createElement("button"); b.textContent = "إعادة المحاولة";
+  b.style.cssText = "padding:8px 18px;border-radius:10px;border:1px solid #f5b942;background:#151920;color:#ffcf70;cursor:pointer";
+  b.onclick = () => location.reload();
+  box.append(p, b); document.body.replaceChildren(box);
+}
 
-<x id="mbtns" style="display:none;">
-  <div class="d-flex fr mbtns" style="max-width:92px;height:21px;">
-    <button style="padding:3px;width:28px;" class="blike corner btn minix btn-danger fa fa-heart"></button>
-    <button style="padding:3px;width:28px;" class="breply corner btn minix btn-primary fa fa-comments"></button>
-    <button style="padding:3px;width:26px;" class="bdel corner btn minix btn-primary fa fa-times"></button>
-  </div>
-</x>
+/* ================= التمرير: قراءة واحدة وكتابة واحدة لكل إطار ================= */
+let scrollQueued = false, stick = false;
+function queueScroll(force) {
+  if (!scrollQueued) {
+    const m = el.messages;
+    stick = m.scrollHeight - m.scrollTop - m.clientHeight < 180;
+    scrollQueued = true;
+    requestAnimationFrame(() => { scrollQueued = false; if (stick) el.messages.scrollTop = el.messages.scrollHeight; });
+  }
+  if (force) stick = true;
+}
 
-<x id="rhtml" style="display:none;">
-  <div class="nosel d-flex room hand" style="text-align:left;width:100%;border-bottom:1px solid lavender;padding:0;padding-left:1px;background-color:#fafafa;">
-    <div class="d-flex flex-grow-1" style="overflow:hidden;padding:1px;">
-      <div style="min-width:52px;width:52px;min-height:50px;max-height:50px;background-color:#f3f3f3;" class="fitimg u-pic borderg"></div>
-      <div style="padding:0 2px;overflow:hidden;" class="flex-grow-1 break">
-        <div style="width:100%;display:flex;overflow:hidden;line-height:normal;margin-top:1px;" class="d-flex">
-          <div class="flex-grow-1"><span style="padding:0 4px;max-width:100%;border-radius:2px;" class="u-topic dots"></span></div>
-        </div>
-        <div style="color:#888;margin-top:-1px;" class="dots mini u-msg"></div>
-      </div>
-    </div>
-    <div class="c-flex">
-      <span class="corner fa fa-user label label-primary uc" style="padding:3px;margin:1px;border-radius:2px;min-width:60px;text-align:center;"></span>
-    </div>
-  </div>
-</x>
+/* ================= رسائل النظام ================= */
+function sys(text) {
+  queueScroll(false);
+  const d = document.createElement("div");
+  d.className = "sys"; d.textContent = text;
+  el.messages.append(d);
+  const all = el.messages.getElementsByClassName("sys");
+  while (all.length > C.SYS_MAX) all[0].remove();
+  setTimeout(() => { d.classList.add("out"); setTimeout(() => d.remove(), 500); }, 4000);
+}
 
-<x id="uhead" style="display:none;">
-  <div class="fl d-flex uzr flex-grow-1 dots" style="margin:3px;">
-    <img class="fl ustat" style="width:4px;height:22px;" src="imgs/s1.png" alt="">
-    <div style="width:36px;height:36px;" class="fitimg fl hand u-pic"></div>
-    <div style="width:100%;margin-top:0;" class="fl dots d-flex flex-grow-1">
-      <img class="fl u-ico" alt="">
-      <span style="max-width:100%;padding:0 4px;border-radius:0;margin-left:1px;" class="nosel flex-grow-1 u-topic dots"></span>
-    </div>
-  </div>
-</x>
+/* ================= حالة الاتصال ================= */
+function showStatus(text, type) {
+  clearTimeout(S.statusTimer);
+  el.status.textContent = text; el.status.className = "on " + type;
+  if (type === "online") S.statusTimer = setTimeout(() => { el.status.className = ""; }, 2500);
+}
 
-<x id="cw" style="display:none;">
-  <div class="c-flex bgg border cw" style="border-radius:2px;position:absolute;top:1px;min-height:190px;max-height:500px;bottom:46%;width:99.8%;max-width:500px;z-index:6;">
-    <div style="width:100%;height:30px;flex:0 0 auto;" class="head d-flex nosel bg fl">
-      <label class="label fl hand fa border fa-user cwpro" style="margin:2px;margin-right:2px;">&nbsp;</label>
-      <div class="cwhead flex-grow-1 d-flex dots" style="overflow:hidden;"></div>
-      <label style="padding:8px;" class="btn btn-info fr border fa fa-expand cwexp">&nbsp;&nbsp;</label>
-      <label style="padding:8px;" class="btn minix btn-danger phide fr border fa fa-minus">&nbsp;&nbsp;</label>
-    </div>
-    <div class="cont break fr c-flex flex-grow-1" style="width:100%;">
-      <div class="d2 flex-grow-1 break light"></div>
-      <div class="tablebox footer d-flex light fl" style="width:100%;height:42px;padding:4px;flex:0 0 auto;">
-        <div class="typ" style="display:none;position:absolute;right:20px;margin-top:-12px;">
-          <div class="typingIndicatorBubbleDot"></div><div class="typingIndicatorBubbleDot"></div><div class="typingIndicatorBubbleDot"></div>
-        </div>
-        <span class="btn btn-success fa fa-phone callx" style="margin-right:3px;margin-top:2px;border-radius:2px;display:none;"></span>
-        <button style="margin-right:3px;margin-top:2px;border-radius:2px;" class="fr fa fa-share-alt sndfile fl btn btn-primary">&nbsp;&nbsp;&nbsp;&nbsp;</button>
-        <img role="button" class="fl nosel emobox" style="padding:5px;width:34px;height:34px;" src="imgs/emoii.gif" alt="">
-        <textarea placeholder="اكتب رسالتك هنا" class="fl flex-fill tbox"></textarea>
-        <button style="margin-left:2px;" class="fa fa-send sndpm fl btn btn-primary">&nbsp;&nbsp;&nbsp;</button>
-      </div>
-    </div>
-  </div>
-</x>
+/* ================= عرض الرسائل ================= */
+function addMessage(key, d) {
+  if (!key || msgs.has(key) || !d) return;
+  const hasText = typeof d.text === "string" && d.text.length > 0 && d.text.length <= C.MSG_MAX;
+  const hasPic = validPicId(d.img);
+  const linkUrl = validLink(d.link);
+  if (!hasText && !hasPic && !linkUrl) return;
+  const mine = d.userId === S.uid;
+  const row = document.createElement("div");
+  row.className = mine ? "msg mine" : "msg";
+  if (outbox.some(i => i.key === key)) row.classList.add("pending");
 
-<x id="pop" style="display:none;">
-  <div class="bgg corner c-flex" style="outline:1px solid gray;overflow-y:hidden;position:absolute;top:1px;min-height:180px;max-height:70%;max-width:420px;width:100%;z-index:10;">
-    <div style="width:100%;height:30px;flex:0 0 auto;" class="head nosel bg fl">
-      <label class="label fl hand fa fa-info title" style="margin:2px;margin-right:2px;">&nbsp;</label>
-      <label style="padding:8px;" class="btn minix btn-danger pphide fr border fa fa-close">&nbsp;&nbsp;</label>
-    </div>
-    <div class="body fl flex-grow-1 break" style="width:100%;overflow:auto;"></div>
-  </div>
-</x>
+  const user = document.createElement("span");
+  user.className = "user";
+  user.textContent = cleanName(d.user) || "مستخدم";
+  if (mine) { user.setAttribute("role", "button"); user.tabIndex = 0; user.title = "اضغط لتغيير اسمك"; }
 
-<x id="not" style="display:none;">
-  <div style="min-width:180px;max-width:260px;border:1px solid black;z-index:2110;background-color:#efefef;position:absolute;top:30%;margin-left:30px;padding:5px;" class="hand corner nosel notbox">
-    <center><div class="corner border label label-primary nottitle" style="padding-top:6px;padding-left:15px;width:50%;padding-right:15px;">تنبيه</div></center>
-    <div class="nothead d-flex" style="width:100%;"></div>
-    <div style="width:100%;display:block;padding:0 5px;overflow:hidden;" class="break m fl notmsg"></div>
-  </div>
-</x>
+  const text = document.createElement("span");
+  text.className = "text";
+  if (hasText) text.textContent = d.text;
+  let picEl = null;
+  if (hasPic) {
+    picEl = document.createElement("img");
+    picEl.className = "pic"; picEl.alt = "صورة"; picEl.decoding = "async"; picEl.tabIndex = 0;
+    picEl.dataset.pic = d.img;
+    // الأبعاد تُحجز مسبقًا فلا تقفز الصفحة عند تحميل الصورة
+    const w = Math.round(Number(d.w)), h = Math.round(Number(d.h));
+    const okDim = w >= 1 && w <= 4096 && h >= 1 && h <= 4096;
+    picEl.width = okDim ? w : 260; picEl.height = okDim ? h : 195;
+    text.append(picEl);
+  }
+  if (linkUrl) {
+    // بطاقة بث مشارك: يراها الجميع، والضغط على «شاهد» يشغّله في نافذة عائمة
+    const ln = cleanText(d.ln, 60);
+    let host = "";
+    try { host = new URL(linkUrl).hostname; } catch {}
+    const card = document.createElement("span");
+    card.className = "share";
+    const label = document.createElement("span");
+    label.className = "share-t";
+    label.textContent = "📺 شارك بثًا: " + (ln || host);
+    label.title = linkUrl;
+    const go = document.createElement("button");
+    go.type = "button"; go.className = "share-go"; go.textContent = "▶ شاهد";
+    go.dataset.url = linkUrl; go.dataset.name = ln || host;
+    card.append(label, go);
+    text.append(card);
+  }
 
-<!-- ===== التنبيه ===== -->
-<div class="modal" id="mmnot" role="dialog" style="z-index:99999;">
-  <div class="modal-dialog">
-    <div class="modal-content" style="width:310px;">
-      <div style="color:white;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;" class="mini fa fa-comments modal-title">تنبيه</label>
-      </div>
-      <div class="modal-body" style="padding:1px;">
-        <div class="break" style="background-color:#efefef;padding:5px;">
-          <textarea placeholder="اكتب رسالتك هنا" class="fl" style="width:100%;resize:none;" maxlength="300"></textarea>
-          <button class="rsave btn btn-primary fr"><span class="fa fa-send">إرسال</span></button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+  const ts = Number(d.timestamp) || now();
+  const time = document.createElement("time");
+  time.className = "time"; time.textContent = relTime(ts); time.title = clock.format(ts);
+  time.dateTime = new Date(ts).toISOString();
 
-<!-- ===== إعلان (publicmsg / ppmsg) ===== -->
-<div class="modal" id="mnot" role="dialog" style="z-index:99999;">
-  <div class="modal-dialog">
-    <div class="modal-content" style="width:310px;">
-      <div style="color:white;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;" class="mini fa fa-comments modal-title">إعلان</label>
-      </div>
-      <div class="modal-body" style="padding:1px;">
-        <div class="break" style="background-color:#efefef;padding:5px;">
-          <textarea placeholder="اكتب رسالتك هنا" class="fl" style="width:100%;resize:none;" maxlength="300"></textarea>
-          <label class="checkbox-inline ppbox"><input type="checkbox" class="ppmsg ispp" disabled="disabled">إعلان خاص للسوابر؟</label>
-          <button class="rsave btn btn-primary fr"><span class="fa fa-send">إرسال</span></button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+  row.append(user, text, time);
+  queueScroll(mine);
+  el.messages.append(row);
+  msgs.set(key, { row, time, ts, picEl });
+  if (picEl) observePic(picEl);
+}
+function removeMessage(key) {
+  const m = msgs.get(key);
+  if (!m) return;
+  if (m.picEl) releasePic(m.picEl);
+  m.row.remove();
+  msgs.delete(key);
+}
 
-<!-- ===== إنشاء / تعديل غرفة ===== -->
-<div class="modal" id="mkr" role="dialog">
-  <div class="modal-dialog">
-    <div class="modal-content" style="width:310px;">
-      <div style="color:white;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;" class="mini fa fa-comments modal-title">إنشاء غرفه جديدة</label>
-      </div>
-      <div class="modal-body" style="padding:1px;">
-        <div class="break" style="background-color:#efefef;padding:5px;position:relative;">
-          <input class="rtopic" style="width:200px;" type="text" placeholder="عنوان الغرفه" maxlength="40">
-          <input class="rabout" style="width:200px;" type="text" placeholder="الوصف" maxlength="200">
-          <input class="rwelcome" style="width:200px;" type="text" placeholder="رساله الترحيب" maxlength="300">
-          <input autocomplete="off" class="rpwd" style="width:200px;" type="text" placeholder="كلمه المرور" maxlength="30">
-          <input class="rmax" style="width:200px;" type="number" placeholder="حجم الغرفه من 2 ألى 40" min="2" max="40">
-          <input class="rl" style="width:200px;" type="number" placeholder="عدد الايكات للدخول" min="0">
-          <input class="rvl" style="width:200px;" type="number" placeholder="عدد الايكات للصوتيه" min="0">
-          <br>
-          <label class="checkbox-inline"><input class="rdel" type="checkbox">تثبيت الغرفه</label><br><br>
-          <label class="checkbox-inline"><input class="rv" type="checkbox">تفعيل الصوتيه</label><br><br>
-          <div class="border btn rnopic" style="width:84px;position:absolute;top:96px;right:4px;padding:4px;">بدون صوره</div>
-          <div class="cpick border btn rcolor" style="width:84px;height:44px;background-image:none;position:absolute;top:140px;right:4px;background-color:#000;"></div>
-          <button class="rmake btn btn-primary fl"><span class="fa fa-plus">إنشاء الغرفه</span></button>
-          <button class="rsave btn btn-primary fl"><span class="fa fa-edit">حفظ التعديلات</span></button>
-          <button class="rdelete btn btn-danger fr"><span class="fa fa-times">حذف</span></button>
-          <div class="rpic fr border hand" style="width:84px;height:84px;"><img style="max-width:100%;height:100%;" src="room.png" alt=""></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+/* ================= الصور =================
+   الصورة تُضغط في المتصفح (WebP) وتُحفظ في pics/{id} منفصلة عن الرسالة،
+   فقائمة الرسائل خفيفة، والصورة لا تُحمَّل إلا عند ظهورها على الشاشة. */
+const pics = new Map();      // id -> Promise<blob URL>
+let picObserver = null;
+const validPicId = v => typeof v === "string" && /^[-\w]{1,40}$/.test(v);
 
-<!-- ===== التعليقات ===== -->
-<div class="modal break" id="rpl" role="dialog" style="margin:5px;">
-  <div class="modal-dialog fr break" style="height:50%;min-height:300px;overflow:visible;margin-top:2px;">
-    <div class="modal-content c-flex break" style="width:306px;height:100%;">
-      <div style="color:white;flex:0 0 auto;" class="modal-header label-primary mclose">
-        <span class="pull-right clickable badge"><i class="fa fa-times"></i></span>
-        <label style="margin:1px;" class="mini fa fa-comments modal-title">التعليقات</label>
-      </div>
-      <div class="modal-body break flex-grow-1 c-flex" style="padding:0;">
-        <div style="width:100%;border-bottom:1px solid black;flex:0 0 auto;" class="rmsg"></div>
-        <div class="break flex-grow-1 r" style="background-color:#efefef;border-left:4px solid grey;"></div>
-        <div class="tablebox footer d-flex light fl" style="width:100%;height:42px;padding:4px;flex:0 0 auto;">
-          <img role="button" class="fl nosel emobox" style="padding:5px;width:34px;height:34px;" src="imgs/emoii.gif" alt="">
-          <textarea placeholder="اكتب رسالتك هنا" class="fl flex-fill tbox"></textarea>
-          <button style="margin-left:2px;" class="fa fa-send sndrpl fl btn btn-primary">&nbsp;&nbsp;&nbsp;</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+function loadPic(id) {
+  let p = pics.get(id);
+  if (!p) {
+    p = fb.get(fb.ref(db, "pics/" + id)).then(async s => {
+      const d = s.val()?.d;
+      if (typeof d !== "string" || !/^data:image\/(webp|jpeg|png|gif);base64,/.test(d)) throw new Error("bad");
+      // تحويلها إلى Blob URL: أخف على الذاكرة من نص base64 طويل داخل الصفحة
+      return URL.createObjectURL(await (await fetch(d)).blob());
+    });
+    p.catch(() => pics.delete(id));
+    pics.set(id, p);
+  }
+  return p;
+}
+function observePic(img) {
+  if (!("IntersectionObserver" in window)) return showPic(img);
+  if (!picObserver) picObserver = new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) { picObserver.unobserve(e.target); showPic(e.target); }
+  }, { root: el.messages, rootMargin: "300px 0px" });
+  picObserver.observe(img);
+}
+function showPic(img) {
+  loadPic(img.dataset.pic)
+    .then(u => { if (img.isConnected) img.src = u; })
+    .catch(() => { img.alt = "تعذر تحميل الصورة"; img.classList.add("broken"); });
+}
+function releasePic(img) {
+  picObserver?.unobserve(img);
+  const id = img.dataset.pic, p = pics.get(id);
+  if (p) { pics.delete(id); p.then(u => URL.revokeObjectURL(u)).catch(() => {}); }
+}
 
-<input type="file" id="filepick" accept="image/*" style="display:none;">
+async function decodeImage(file) {
+  if ("createImageBitmap" in window) {
+    try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch {}
+  }
+  return new Promise((ok, no) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); ok(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); no(new Error("decode")); };
+    im.src = u;
+  });
+}
+const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
+const blobToDataURL = b => new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result)); fr.onerror = no; fr.readAsDataURL(b); });
+let webpOk = null;
+async function compressImage(file) {
+  const src = await decodeImage(file);
+  const sw = src.naturalWidth || src.width, sh = src.naturalHeight || src.height;
+  if (!sw || !sh) throw new Error("decode");
+  const targetBytes = Math.floor(C.PIC_TARGET * 0.74);
+  let scale = Math.min(1, C.PIC_SIDE / Math.max(sw, sh)), best = null;
+  try {
+    for (let round = 0; round < 5; round++) {
+      const w = Math.max(1, Math.round(sw * scale)), h = Math.max(1, Math.round(sh * scale));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const x = c.getContext("2d");
+      x.imageSmoothingQuality = "high";
+      x.fillStyle = "#fff"; x.fillRect(0, 0, w, h);
+      x.drawImage(src, 0, 0, w, h);
+      // الجودة تنزل تدريجيًا حتى الحجم المستهدف، ثم يُصغَّر المقاس إن لزم
+      for (let q = 0.86; q >= 0.6; q -= 0.08) {
+        let b = webpOk === false ? null : await toBlob(c, "image/webp", q);
+        if (b && b.type !== "image/webp") b = null;
+        if (webpOk === null) webpOk = !!b;
+        if (!b) b = await toBlob(c, "image/jpeg", q);
+        if (!b) throw new Error("decode");
+        best = { b, w, h };
+        if (b.size <= targetBytes) break;
+      }
+      c.width = c.height = 0; // تحرير ذاكرة اللوحة فورًا
+      if (best.b.size <= targetBytes) break;
+      scale *= 0.8;
+    }
+  } finally { src.close?.(); }
+  const d = await blobToDataURL(best.b);
+  if (d.length > C.PIC_MAX) throw new Error("size");
+  return { d, w: best.w, h: best.h, blob: best.b };
+}
+const withTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error("timeout")), ms))]);
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js"></script>
-<script type="module" src="js/main.js"></script>
+async function sendPicture(file) {
+  if (!file) return;
+  if (!/^image\//.test(file.type)) { sys("⚠️ اختر صورة فقط"); return; }
+  if (file.size > C.FILE_MAX) { sys("⚠️ حجم الصورة كبير جدًا"); return; }
+  if (!fb || !S.connected) { sys("⚠️ يجب الاتصال بالإنترنت لإرسال الصور"); return; }
+  if (S.uploading) return;
+  S.uploading = true; el.picBtn.disabled = true;
+  sys("⏳ جاري تجهيز الصورة…");
+  try {
+    const { d, w, h, blob } = await compressImage(file);
+    const picRef = fb.push(fb.ref(db, "pics"));
+    // الصورة + فهرس صغير لوقتها (يسمح بتنظيف الصور القديمة دون تنزيل محتواها)
+    await withTimeout(fb.update(fb.ref(db), {
+      ["pics/" + picRef.key]: { uid: S.uid, d, ts: fb.serverTimestamp() },
+      ["picidx/" + picRef.key]: fb.serverTimestamp()
+    }), 45000);
+    pics.set(picRef.key, Promise.resolve(URL.createObjectURL(blob))); // تظهر فورًا بلا إعادة تنزيل
+    const item = { key: fb.push(fb.ref(db, "messages")).key, img: picRef.key, w, h, tries: 0 };
+    outbox.push(item);
+    if (outbox.length > C.OUTBOX_MAX) outbox = outbox.slice(-C.OUTBOX_MAX);
+    saveOutbox();
+    queueScroll(true);
+    deliver(item);
+  } catch (e) {
+    console.warn("Picture failed:", e);
+    sys(e.message === "decode" ? "❌ تعذر قراءة الصورة" : e.message === "size" ? "❌ الصورة كبيرة جدًا حتى بعد الضغط" : "❌ تعذر إرسال الصورة");
+  } finally {
+    S.uploading = false; el.picBtn.disabled = false;
+  }
+}
+function openViewer(img) {
+  if (!img.src || typeof el.viewer.showModal !== "function") return;
+  el.viewerImg.src = img.src;
+  el.viewer.showModal();
+}
+function refreshTimes() {
+  for (const m of msgs.values()) {
+    const t = relTime(m.ts);
+    if (m.time.textContent !== t) m.time.textContent = t;
+  }
+}
+
+/* ================= صندوق الصادر (Outbox) =================
+   كل رسالة تُحفظ محليًا بمفتاح ثابت قبل إرسالها، وتُحذف فقط بعد تأكيد الخادم.
+   إعادة الإرسال بنفس المفتاح لا تكرر الرسالة أبدًا. */
+function saveOutbox() { outbox.length ? store.set(KEY.OUTBOX, JSON.stringify(outbox)) : store.del(KEY.OUTBOX); }
+function loadOutbox() {
+  const ok = i => i && ((typeof i.text === "string" && i.text.length > 0 && i.text.length <= C.MSG_MAX) || validPicId(i.img) || validLink(i.link));
+  try { const a = JSON.parse(store.get(KEY.OUTBOX) || "[]"); outbox = Array.isArray(a) ? a.filter(ok) : []; } catch { outbox = []; }
+  // ترحيل الرسائل المحفوظة من النسخة القديمة
+  try {
+    const old = JSON.parse(store.get(KEY.OLD_QUEUE) || "null");
+    if (Array.isArray(old)) {
+      old.filter(ok).forEach(i => outbox.push({ key: null, text: i.text, tries: 0 }));
+      store.del(KEY.OLD_QUEUE);
+    }
+  } catch { store.del(KEY.OLD_QUEUE); }
+  if (outbox.length > C.OUTBOX_MAX) outbox = outbox.slice(-C.OUTBOX_MAX);
+}
+function settle(key, delivered) {
+  inflight.delete(key);
+  outbox = outbox.filter(i => i.key !== key);
+  saveOutbox();
+  const m = msgs.get(key);
+  if (m) m.row.classList.remove("pending");
+  if (!delivered) removeMessage(key);
+}
+function deliver(item) {
+  if (!item.key || inflight.has(item.key)) return;
+  inflight.add(item.key);
+  const dog = watchdog();
+  const target = fb.ref(db, "messages/" + item.key);
+  const body = { userId: S.uid, user: S.name, timestamp: fb.serverTimestamp() };
+  if (item.img) { body.img = item.img; body.w = item.w; body.h = item.h; }
+  else if (item.link) { body.link = item.link; if (item.ln) body.ln = item.ln; }
+  else body.text = item.text;
+  fb.set(target, body)
+    .then(() => { clearTimeout(dog); settle(item.key, true); })
+    .catch(async err => {
+      clearTimeout(dog);
+      inflight.delete(item.key);
+      // ربما وصلت سابقًا والقواعد تمنع الكتابة فوقها
+      try {
+        const snap = await fb.get(target);
+        if (snap.exists() && snap.val()?.userId === S.uid) return settle(item.key, true);
+      } catch {}
+      console.warn("Send failed:", err);
+      item.tries = (item.tries || 0) + 1;
+      if (item.tries >= C.MAX_TRIES) { settle(item.key, false); sys("❌ رُفضت رسالة ولم تُرسل"); }
+      else saveOutbox();
+    });
+}
+function flushOutbox() { outbox.forEach(deliver); }
+
+const latinDigits = s => s.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, d => String((d.charCodeAt(0) & 0xF) % 10));
+function sendMessage() {
+  // كـ chat-new: الأسطر تصير مسافات، والأرقام العربية لاتينية، والفارغ لا يُرسل ولا يُنبَّه
+  const text = latinDigits(el.input.value.replace(/[\r\n]+/g, " ")).trim();
+  el.input.focus();
+  if (!text) return;
+  if (text.length > C.MSG_MAX) { sys("⚠️ الرسالة طويلة جدًا"); return; }
+  const t = Date.now();
+  // ضغطتان سريعتان: لا نتجاهل الثانية بصمت، بل نرسلها تلقائيًا بعد انتهاء المهلة القصيرة
+  if (t - S.lastSend < C.COOLDOWN) { clearTimeout(S.cdTimer); S.cdTimer = setTimeout(sendMessage, C.COOLDOWN - (t - S.lastSend)); return; }
+  if (!fb) { sys("⏳ جاري الاتصال…"); return; }
+  S.lastSend = t;
+  el.input.value = "";
+  stopTyping();
+  const item = { key: fb.push(fb.ref(db, "messages")).key, text, tries: 0 };
+  outbox.push(item);
+  if (outbox.length > C.OUTBOX_MAX) outbox = outbox.slice(-C.OUTBOX_MAX);
+  saveOutbox();
+  deliver(item); // Firebase يعرضها فورًا محليًا ثم يؤكدها الخادم
+  if (!S.connected) sys("💾 حُفظت الرسالة وستُرسل عند عودة الاتصال (" + outbox.length + ")");
+}
+
+/* ================= مشاركة رابط بث مع الجميع (زر +) =================
+   البث المشارك رسالة في الشات (link + ln): يراها الحاضرون ومن يدخل لاحقًا، وتُنظَّف بعد 48 ساعة. */
+function validLink(v) {
+  if (typeof v !== "string" || !v || v.length > 500 || /\s/.test(v)) return null;
+  try {
+    const u = new URL(v);
+    return (u.protocol === "https:" || u.protocol === "http:") && u.hostname && u.href.length <= 500 ? u.href : null;
+  } catch { return null; }
+}
+function shareLink(raw, name) {
+  const link = validLink(String(raw || "").trim());
+  if (!link) return { ok: false, msg: "الرابط غير صالح: يجب أن يبدأ بـ https وألا يزيد عن 500 حرف." };
+  // الموقع على https، والمتصفحات تمنع تشغيل بث http داخله؛ فلا نشارك رابطًا لن يعمل عند أحد
+  if (!link.startsWith("https://")) return { ok: false, msg: "روابط http لا تعمل داخل الموقع؛ استخدم رابطًا يبدأ بـ https." };
+  if (!fb || !R) return { ok: false, msg: "⏳ جاري الاتصال… أعد المحاولة بعد لحظات." };
+  const t = Date.now();
+  if (t - (S.lastShare || 0) < 10000) return { ok: false, msg: "انتظر بضع ثوانٍ قبل مشاركة بث آخر." };
+  S.lastShare = t;
+  const item = { key: fb.push(fb.ref(db, "messages")).key, link, tries: 0 };
+  const ln = cleanText(name, 60);
+  if (ln) item.ln = ln;
+  outbox.push(item);
+  if (outbox.length > C.OUTBOX_MAX) outbox = outbox.slice(-C.OUTBOX_MAX);
+  saveOutbox();
+  queueScroll(true);
+  deliver(item);
+  return { ok: true, msg: S.connected ? "✅ تمت المشاركة مع الجميع" : "💾 حُفظت وستُشارك عند عودة الاتصال" };
+}
+let tvMod = null;
+function loadTV() {
+  return (tvMod ??= import("./tv.js")
+    .then(m => { m.setup({ share: shareLink }); return m; })
+    .catch(e => { tvMod = null; throw e; }));
+}
+
+/* ================= الدولة والمنطقة =================
+   تُعرف من عنوان IP مرة واحدة يوميًا وتُحفظ محليًا، ولا تؤخر تشغيل الشات. */
+let myGeo = null;
+const validCC = v => typeof v === "string" && /^[A-Z]{2}$/.test(v);
+const cleanText = (v, max) => String(v ?? "").replace(/[\u0000-\u001F\u007F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "").trim().slice(0, max);
+const countryName = (() => {
+  try { const dn = new Intl.DisplayNames(["ar"], { type: "region" }); return cc => { try { return dn.of(cc) || cc; } catch { return cc; } }; }
+  catch { return cc => cc; }
+})();
+function placeText(d) {
+  if (!validCC(d?.cc)) return "";
+  const region = cleanText(d.region, 40);
+  return region ? countryName(d.cc) + " · " + region : countryName(d.cc);
+}
+function flagEl(cc) {
+  if (!validCC(cc)) {
+    const s = document.createElement("span"); s.className = "noflag"; s.textContent = "🌐"; s.setAttribute("aria-hidden", "true");
+    return s;
+  }
+  const c = cc.toLowerCase(), img = document.createElement("img");
+  img.className = "flag"; img.width = 16; img.height = 16;
+  img.src = "flags/" + c + ".png";
+  img.onerror = () => { img.onerror = null; img.src = "flags/--.png"; };
+  img.alt = countryName(cc); img.decoding = "async";
+  return img;
+}
+async function fetchJSON(url) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 5000);
+  try {
+    const r = await fetch(url, { signal: ac.signal, credentials: "omit", referrerPolicy: "no-referrer" });
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+// دولة المنطقة الزمنية للجهاز: لا يغيّرها الـVPN ولا توجيه شركات الاتصال، فنصحّح بها دولة الـIP في الدول العربية
+const TZ_CC = {
+  "Africa/Tripoli": "LY", "Asia/Riyadh": "SA", "Asia/Kuwait": "KW", "Asia/Baghdad": "IQ", "Asia/Amman": "JO",
+  "Asia/Dubai": "AE", "Asia/Qatar": "QA", "Asia/Bahrain": "BH", "Asia/Muscat": "OM", "Asia/Aden": "YE",
+  "Africa/Cairo": "EG", "Africa/Tunis": "TN", "Africa/Algiers": "DZ", "Africa/Casablanca": "MA", "Africa/El_Aaiun": "MA",
+  "Africa/Khartoum": "SD", "Asia/Damascus": "SY", "Asia/Beirut": "LB", "Asia/Gaza": "PS", "Asia/Hebron": "PS",
+  "Africa/Nouakchott": "MR", "Africa/Djibouti": "DJ", "Africa/Mogadishu": "SO", "Indian/Comoro": "KM"
+};
+function tzCC() {
+  try { return TZ_CC[Intl.DateTimeFormat().resolvedOptions().timeZone] || null; } catch { return null; }
+}
+async function loadGeo() {
+  const g = await ipGeo(), tz = tzCC();
+  if (tz && (!g || g.cc !== tz)) return { cc: tz, region: "" }; // مثال: جهاز على توقيت طرابلس وIP أمريكي ← ليبيا
+  return g;
+}
+async function ipGeo() {
+  try {
+    const c = JSON.parse(store.get(KEY.GEO) || "null");
+    if (c && validCC(c.cc) && Date.now() - c.at < C.GEO_TTL) return { cc: c.cc, region: cleanText(c.region, 40) };
+  } catch {}
+  const sources = [
+    "https://get.geojs.io/v1/ip/geo.json",
+    "https://ipwho.is/?fields=success,country_code,region"
+  ];
+  for (const url of sources) {
+    try {
+      const d = await fetchJSON(url);
+      const cc = String(d.country_code || "").toUpperCase();
+      if (validCC(cc)) {
+        const g = { cc, region: cleanText(d.region, 40) };
+        store.set(KEY.GEO, JSON.stringify({ ...g, at: Date.now() }));
+        return g;
+      }
+    } catch {}
+  }
+  return null;
+}
+const geoFields = () => (myGeo ? { cc: myGeo.cc, region: myGeo.region } : {});
+
+/* ================= المتصلون ================= */
+let usersQueued = false;
+function queueUsers() { if (!usersQueued) { usersQueued = true; requestAnimationFrame(renderUsers); } }
+function renderUsers() {
+  usersQueued = false;
+  const open = el.usersBox.classList.contains("on");
+  const frag = open ? document.createDocumentFragment() : null;
+  let n = 0;
+  const add = (uid, d) => {
+    if (!isActive(d)) return;
+    n++;
+    if (!frag) return;
+    const me = uid === S.uid;
+    const item = document.createElement(me ? "button" : "div");
+    item.className = "u";
+    if (me) { item.type = "button"; item.dataset.rename = "1"; item.title = "اضغط لتغيير اسمك"; }
+    const dot = document.createElement("span"); dot.className = "dot";
+    const who = document.createElement("span"); who.className = "who";
+    const name = document.createElement("span"); name.className = "n";
+    const nm = cleanName(d.name) || "مستخدم";
+    name.textContent = me ? nm + " [أنت]" : nm;
+    who.append(name);
+    const place = placeText(d);
+    if (place && !me) item.title = place; // الدولة والمنطقة تظهر عند التمرير فقط
+    item.append(dot, flagEl(d.cc), who); frag.append(item);
+  };
+  if (users.has(S.uid)) add(S.uid, users.get(S.uid));
+  for (const [uid, d] of users) if (uid !== S.uid) add(uid, d);
+  el.count.textContent = String(n);
+  if (frag) el.usersList.replaceChildren(frag);
+}
+function toggleUsers(open) {
+  const on = open ?? !el.usersBox.classList.contains("on");
+  el.usersBox.classList.toggle("on", on);
+  el.onlineBtn.setAttribute("aria-expanded", String(on));
+  if (on) { setEmoji(false); renderUsers(); }
+}
+
+/* ================= مؤشر الكتابة ================= */
+let typingQueued = false;
+function queueTyping() { if (!typingQueued) { typingQueued = true; requestAnimationFrame(renderTyping); } }
+function renderTyping() {
+  typingQueued = false;
+  const names = [];
+  for (const [uid, d] of typers) if (uid !== S.uid) { const n = cleanName(d?.name); if (n) names.push(n); }
+  const txt = names.length === 0 ? "" : names.length === 1 ? names[0] + " يكتب الآن..." :
+    names.length === 2 ? names[0] + " و " + names[1] + " يكتبان الآن..." : "عدة أشخاص يكتبون الآن...";
+  if (el.typing.textContent !== txt) el.typing.textContent = txt;
+  el.typing.classList.toggle("on", !!txt);
+}
+function onTypingInput() {
+  if (!el.input.value.trim()) { stopTyping(); return; }
+  const t = Date.now();
+  if (R && S.connected && (!S.typingOn || t - S.typingWrite > C.TYPING_REFRESH)) {
+    S.typingOn = true; S.typingWrite = t;
+    fb.set(R.myTyping, { name: S.name, ts: fb.serverTimestamp() }).catch(() => {});
+  }
+  clearTimeout(S.typingTimer);
+  S.typingTimer = setTimeout(stopTyping, C.TYPING_IDLE);
+}
+function stopTyping() {
+  clearTimeout(S.typingTimer);
+  if (!S.typingOn) return;
+  S.typingOn = false;
+  if (R) fb.remove(R.myTyping).catch(() => {});
+}
+
+/* ================= الحضور ================= */
+async function onConnected() {
+  const seq = ++S.syncSeq;
+  try {
+    await fb.onDisconnect(R.me).remove();
+    await fb.onDisconnect(R.myTyping).remove();
+    if (seq !== S.syncSeq || !S.connected) return;
+    await fb.set(R.me, { name: S.name, joinedAt: fb.serverTimestamp(), lastActive: fb.serverTimestamp(), ...geoFields() });
+  } catch (e) { console.warn("Presence sync failed:", e); }
+  flushOutbox();
+  scheduleCleanup();
+}
+/* ================= التنظيف التلقائي =================
+   الباقة المجانية لا تشغّل كودًا على الخادم، فكل زائر يساعد بالتنظيف:
+   مرة كل ساعة كحد أقصى لكل جهاز، بعد الاتصال بقليل وفي وقت فراغ المتصفح.
+   القواعد لا تسمح إلا بحذف ما انتهت مدته. */
+let cleanTimer = 0, cleaning = false;
+function scheduleCleanup() {
+  clearTimeout(cleanTimer);
+  const last = Number(store.get(KEY.CLEAN)) || 0;
+  const wait = Math.max(C.CLEAN_DELAY, last + C.CLEAN_EVERY - Date.now()) + Math.random() * 10000;
+  cleanTimer = setTimeout(() => {
+    const run = () => { if (S.connected && !document.hidden && !cleaning) cleanup().catch(e => console.warn("Cleanup:", e)); };
+    "requestIdleCallback" in window ? requestIdleCallback(run, { timeout: 5000 }) : run();
+  }, wait);
+}
+async function cleanup() {
+  cleaning = true;
+  store.set(KEY.CLEAN, String(Date.now()));
+  const cutoff = now() - C.KEEP_HOURS * 3600000;
+  const del = paths => Promise.allSettled(paths.map(p => fb.remove(fb.ref(db, p))));
+  const oldest = path => fb.get(fb.query(fb.ref(db, path), fb.orderByKey(), fb.limitToFirst(C.CLEAN_BATCH)));
+  let removed = 0;
+  // كل خطوة مستقلة: فشل واحدة لا يوقف الباقي
+  const step = async (name, fn) => { try { await fn(); } catch (e) { console.warn("Cleanup " + name + ":", e); } };
+  try {
+    // 1) الرسائل القديمة + صورها (المفاتيح مرتبة زمنيًا، فنقرأ الأقدم فقط)
+    await step("messages", async () => { for (let round = 0; round < 5; round++) {
+      const snap = await oldest("messages");
+      const paths = [];
+      let total = 0, old = 0;
+      snap.forEach(c => {
+        total++;
+        const d = c.val(), ts = Number(d?.timestamp);
+        if (ts && ts < cutoff) {
+          old++;
+          paths.push("messages/" + c.key);
+          if (validPicId(d.img)) paths.push("pics/" + d.img, "picidx/" + d.img);
+        }
+      });
+      if (!paths.length) break;
+      await del(paths);
+      removed += old;
+      if (total < C.CLEAN_BATCH || old < total) break;
+    } });
+    // 2) الصور القديمة من الفهرس (يشمل الصور التي لم تُرسل رسالتها)
+    await step("pics", async () => { for (let round = 0; round < 5; round++) {
+      const snap = await oldest("picidx");
+      const paths = [];
+      let total = 0, old = 0;
+      snap.forEach(c => {
+        total++;
+        const ts = Number(c.val());
+        if (ts && ts < cutoff) { old++; paths.push("pics/" + c.key, "picidx/" + c.key); }
+      });
+      if (!paths.length) break;
+      await del(paths);
+      if (total < C.CLEAN_BATCH || old < total) break;
+    } });
+    // 3) حضور ومؤشرات كتابة عالقة (أجهزة أُغلقت دون انفصال سليم)
+    await step("presence", async () => {
+      const t = now(), stale = [];
+      const [on, ty] = await Promise.all([fb.get(fb.ref(db, "online")), fb.get(fb.ref(db, "typing"))]);
+      on.forEach(c => { const la = Number(c.val()?.lastActive); if (c.key !== S.uid && la && la < t - C.ONLINE_STALE) stale.push("online/" + c.key); });
+      ty.forEach(c => { const ts = Number(c.val()?.ts); if (c.key !== S.uid && ts && ts < t - C.TYPING_STALE_DEL) stale.push("typing/" + c.key); });
+      if (stale.length) await del(stale);
+    });
+    if (removed) console.info("Cleanup removed", removed, "old messages");
+  } finally {
+    cleaning = false;
+  }
+}
+
+/* الجوال قد يقتل الاتصال بصمت والصفحة مفتوحة، وFirebase يظن أنه متصل فتعلق الرسائل.
+   كل كتابة لها مهلة: إن لم يؤكدها الخادم خلال ACK_TIMEOUT نفتح اتصالًا جديدًا فورًا. */
+function watchdog() {
+  return setTimeout(() => { if (S.connected && !document.hidden) { console.warn("No server ack → reconnect"); reconnect(); } }, C.ACK_TIMEOUT);
+}
+function heartbeat() {
+  if (!R || !S.connected) return;
+  S.lastBeat = Date.now();
+  const dog = watchdog();
+  fb.update(R.me, { name: S.name, lastActive: fb.serverTimestamp() }).then(() => clearTimeout(dog), () => clearTimeout(dog));
+}
+// عند الضغط على مربع الكتابة: نتأكد أن الاتصال حي قبل أن يكتب المستخدم
+function checkAlive() { if (Date.now() - (S.lastBeat || 0) > 15000) heartbeat(); }
+
+/* ================= مؤقّت دوري واحد (يتوقف في الخلفية) ================= */
+function tick() {
+  S.tick++;
+  const t = now();
+  let changed = false;
+  for (const [uid, d] of typers) if (Number(d?.ts) && t - Number(d.ts) > C.TYPING_STALE) { typers.delete(uid); changed = true; }
+  if (changed) queueTyping();
+  queueUsers();
+  if (S.tick % 3 === 0) { heartbeat(); refreshTimes(); }
+}
+function startTicker() { if (!S.ticker) S.ticker = setInterval(tick, C.TICK); }
+function stopTicker() { clearInterval(S.ticker); S.ticker = 0; }
+
+/* إعادة اتصال إجبارية: الجوال يقتل الـ WebSocket بصمت عند التنقل بين البرامج،
+   وFirebase يظن أن الاتصال ما زال حيًا فلا تصل الرسائل. نغلقه ونفتح اتصالًا جديدًا فورًا. */
+function reconnect() {
+  if (!db || Date.now() - (S.lastReconnect || 0) < 4000) return;
+  S.lastReconnect = Date.now();
+  S.paused = true;           // يمنع ظهور "انقطع الاتصال" أثناء إعادة الاتصال المقصودة
+  fb.goOffline(db);
+  S.paused = false;
+  fb.goOnline(db);           // يعيد مزامنة الرسائل ويرسل أي رسائل معلّقة تلقائيًا
+}
+function onVisibility() {
+  if (document.hidden) {
+    S.hiddenAt = Date.now();
+    stopTyping();
+    stopTicker();
+    clearTimeout(S.hiddenTimer);
+    S.hiddenTimer = setTimeout(() => { if (db && document.hidden) { S.paused = true; fb.goOffline(db); } }, C.HIDDEN_DISCONNECT);
+  } else {
+    clearTimeout(S.hiddenTimer);
+    if (S.paused) { S.paused = false; fb.goOnline(db); }
+    else if (Date.now() - (S.hiddenAt || 0) > C.RESUME_RECONNECT) reconnect();
+    else heartbeat();
+    startTicker(); refreshTimes(); queueUsers(); queueTyping();
+    if (S.connected) scheduleCleanup();
+  }
+}
+
+/* ================= تغيير الاسم ================= */
+function openRename() {
+  toggleUsers(false); setEmoji(false);
+  if (typeof el.dlg.showModal !== "function") {
+    const v = window.prompt("الاسم الجديد:", S.name);
+    if (v !== null) changeName(v);
+    return;
+  }
+  el.nameInput.value = S.name;
+  el.dlg.showModal();
+  el.nameInput.select();
+}
+async function changeName(raw) {
+  const n = cleanName(raw);
+  if (!n) { sys("⚠️ الاسم لا يمكن أن يكون فارغًا"); return false; }
+  if (n === S.name) return true;
+  if (!S.connected || !R) { sys("⚠️ يجب الاتصال بالإنترنت لتغيير الاسم"); return false; }
+  const old = S.name;
+  S.name = n; store.set(KEY.NAME, n);
+  try {
+    await fb.update(R.me, { name: n, lastActive: fb.serverTimestamp() });
+    for (const u of el.messages.querySelectorAll(".msg.mine .user")) if (u.textContent === old) u.textContent = n;
+    sys("✅ " + old + " → " + n);
+    queueUsers();
+    return true;
+  } catch (e) {
+    S.name = old; store.set(KEY.NAME, old);
+    console.warn("Rename failed:", e);
+    sys("❌ تعذر تغيير الاسم");
+    return false;
+  }
+}
+
+/* ================= الإيموجي (تحميل كسول عند أول حاجة) ================= */
+let pickerPromise = null;
+function loadPicker() {
+  if (pickerPromise) return pickerPromise;
+  pickerPromise = import(EMOJI + "index.js").then(async () => {
+    const p = document.createElement("emoji-picker");
+    try { p.i18n = (await import(EMOJI + "i18n/ar.js")).default; } catch {}
+    p.addEventListener("emoji-click", insertEmoji);
+    el.emojiWrap.replaceChildren(p);
+    return p;
+  }).catch(e => {
+    pickerPromise = null;
+    console.warn("Emoji picker failed:", e);
+    setEmoji(false);
+    sys("❌ تعذر تحميل الإيموجي");
+  });
+  return pickerPromise;
+}
+function setEmoji(open) {
+  el.emojiWrap.classList.toggle("on", open);
+  el.emojiBtn.setAttribute("aria-expanded", String(open));
+  if (open) { toggleUsers(false); placeEmoji(); loadPicker(); }
+}
+/* وضع الصندوق فوق الزر: يتوسّطه أفقيًا قدر الإمكان، ولا يتجاوز حواف الشاشة،
+   ويقصر ارتفاعه تلقائيًا إذا ضاقت المساحة (مثل ظهور كيبورد الجوال) */
+function placeEmoji() {
+  if (!el.emojiWrap.classList.contains("on")) return;
+  const b = el.emojiBtn.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  const gap = 10, edge = 8;
+  const width = Math.min(360, vw - edge * 2);
+  const height = Math.max(200, Math.min(390, Math.floor(b.top - gap - edge)));
+  const center = b.left + b.width / 2;
+  const left = Math.min(Math.max(center - width / 2, edge), vw - width - edge);
+  const s = el.emojiWrap.style;
+  s.width = width + "px";
+  s.height = height + "px";
+  s.left = left + "px";
+  s.bottom = (window.innerHeight - b.top + gap) + "px";
+  s.setProperty("--arrow-x", Math.min(Math.max(center - left, 18), width - 18) + "px");
+}
+function insertEmoji(e) {
+  const v = e.detail?.unicode;
+  if (!v) return;
+  const inp = el.input, s = inp.selectionStart ?? inp.value.length, en = inp.selectionEnd ?? inp.value.length;
+  const next = inp.value.slice(0, s) + v + inp.value.slice(en);
+  if (next.length > C.MSG_MAX) return;
+  inp.value = next;
+  inp.focus({ preventScroll: true });
+  try { inp.setSelectionRange(s + v.length, s + v.length); } catch {}
+  onTypingInput();
+}
+
+/* ================= ربط الواجهة ================= */
+function bindUI() {
+  el.form.addEventListener("submit", e => { e.preventDefault(); sendMessage(); });
+  el.picBtn.addEventListener("click", () => { setEmoji(false); el.picInput.value = ""; el.picInput.click(); });
+  el.picInput.addEventListener("change", () => sendPicture(el.picInput.files?.[0]));
+  // لصق صورة مباشرة في حقل الكتابة
+  el.input.addEventListener("paste", e => {
+    const f = [...(e.clipboardData?.files || [])].find(x => x.type.startsWith("image/"));
+    if (f) { e.preventDefault(); sendPicture(f); }
+  });
+  el.viewer.addEventListener("click", () => el.viewer.close());
+  // إعادة تموضع صندوق الإيموجي عند تغيّر الشاشة أو ظهور الكيبورد (مرة واحدة لكل إطار)
+  let placeQueued = false;
+  const queuePlace = () => { if (!placeQueued && el.emojiWrap.classList.contains("on")) { placeQueued = true; requestAnimationFrame(() => { placeQueued = false; placeEmoji(); }); } };
+  window.addEventListener("resize", queuePlace, { passive: true });
+  window.visualViewport?.addEventListener("resize", queuePlace, { passive: true });
+  el.input.addEventListener("input", onTypingInput);
+  // Enter يرسل دائمًا كـ chat-new (لا أسطر جديدة)؛ لا نرسل أثناء تركيب الحروف في الكيبورد
+  el.input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendMessage(); }
+  });
+  el.input.addEventListener("focus", checkAlive);
+  el.input.addEventListener("click", () => setTimeout(() => { el.messages.scrollTop = el.messages.scrollHeight; }, 600));
+  el.input.addEventListener("blur", stopTyping);
+
+  el.onlineBtn.addEventListener("click", () => toggleUsers());
+  // التلفاز وزر +: الكود والمشغّل والقنوات تُحمَّل عند أول استخدام فقط
+  const warm = () => loadTV().catch(() => {});
+  el.tvBtn.addEventListener("pointerenter", warm, { once: true });
+  el.linkBtn.addEventListener("pointerenter", warm, { once: true });
+  const openTV = (btn, mode) => async () => {
+    toggleUsers(false); setEmoji(false);
+    try { (await loadTV()).toggle(btn, mode); }
+    catch (e) { console.warn("TV failed:", e); sys("❌ تعذر تحميل التلفاز"); }
+  };
+  el.tvBtn.addEventListener("click", openTV(el.tvBtn, "tv"));
+  el.linkBtn.addEventListener("click", openTV(el.linkBtn, "link"));
+  el.emojiBtn.addEventListener("click", () => setEmoji(!el.emojiWrap.classList.contains("on")));
+  // تجهيز الإيموجي مسبقًا عند الاقتراب من الزر
+  el.emojiBtn.addEventListener("pointerenter", loadPicker, { once: true });
+  el.emojiBtn.addEventListener("touchstart", loadPicker, { once: true, passive: true });
+
+  // مستمع واحد لكل الرسائل بدل مستمع لكل رسالة (أقل ذاكرة)
+  el.messages.addEventListener("click", e => {
+    if (e.target.closest(".msg.mine .user")) openRename();
+    else if (e.target.classList?.contains("pic")) openViewer(e.target);
+    else {
+      const go = e.target.closest(".share-go");
+      if (go) loadTV().then(m => m.playLink(go.dataset.url, go.dataset.name))
+        .catch(err => { console.warn("Link play failed:", err); sys("❌ تعذر تشغيل البث"); });
+    }
+  });
+  el.messages.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target.closest(".msg.mine .user")) { e.preventDefault(); openRename(); }
+    else if (e.target.classList?.contains("pic")) { e.preventDefault(); openViewer(e.target); }
+  });
+  el.usersList.addEventListener("click", e => { if (e.target.closest("[data-rename]")) openRename(); });
+
+  document.addEventListener("click", e => {
+    const t = e.target;
+    if (el.usersBox.classList.contains("on") && !el.usersBox.contains(t) && !el.onlineBtn.contains(t)) toggleUsers(false);
+    if (el.emojiWrap.classList.contains("on") && !el.emojiWrap.contains(t) && !el.emojiBtn.contains(t)) setEmoji(false);
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { setEmoji(false); toggleUsers(false); } });
+
+  el.nameForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (await changeName(el.nameInput.value)) el.dlg.close();
+  });
+  el.nameCancel.addEventListener("click", () => el.dlg.close());
+
+  document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("pagehide", stopTyping);
+  // رجوع الصفحة من ذاكرة المتصفح (bfcache) أو رجوع الإنترنت: اتصال جديد فورًا
+  window.addEventListener("pageshow", e => { if (e.persisted) reconnect(); });
+  window.addEventListener("online", reconnect);
+}
+
+/* ================= التشغيل ================= */
+async function boot() {
+  S.name = cleanName(store.get(KEY.NAME)) || "زائر" + (1000 + Math.floor(Math.random() * 9000));
+  store.set(KEY.NAME, S.name);
+  loadOutbox();
+  const geoPromise = loadGeo(); // بالتوازي مع تحميل Firebase
+  bindUI();
+  sys("مرحبًا " + S.name);
+
+  let appM, authM;
+  try {
+    [appM, authM, fb] = await Promise.all([
+      import(FB + "firebase-app.js"), import(FB + "firebase-auth.js"), import(FB + "firebase-database.js")
+    ]);
+  } catch (e) {
+    console.error(e); fb = null;
+    return fatal("تعذر تحميل مكتبات Firebase.\nتحقق من اتصالك بالإنترنت.");
+  }
+
+  let user;
+  try {
+    const app = appM.initializeApp(FIREBASE_CONFIG);
+    const auth = authM.getAuth(app);
+    user = await new Promise((res, rej) => { const off = authM.onAuthStateChanged(auth, u => { off(); res(u); }, rej); });
+    if (!user) user = (await authM.signInAnonymously(auth)).user;
+    if (!user?.uid) throw new Error("No user");
+    fb.forceWebSockets(); // كـ chat-new: WebSocket فقط، فلا يرجع Firebase للاستطلاع البطيء الذي يوصل الرسائل متأخرة ودفعة واحدة
+    db = fb.getDatabase(app);
+  } catch (e) {
+    console.error("Auth failed:", e); fb = null;
+    return fatal("تعذر تسجيل الدخول إلى النظام.\nتأكد من تفعيل Anonymous Authentication في Firebase.");
+  }
+
+  S.uid = user.uid;
+  R = { me: fb.ref(db, "online/" + S.uid), myTyping: fb.ref(db, "typing/" + S.uid) };
+  geoPromise.then(g => {
+    if (!g) return;
+    myGeo = g;
+    if (S.connected) fb.update(R.me, geoFields()).catch(() => {});
+  });
+
+  // الرسائل: نفس الاستعلام المحدود للإضافة والحذف، فلا يُحمَّل السجل كاملًا
+  const q = fb.query(fb.ref(db, "messages"), fb.limitToLast(C.VISIBLE));
+  fb.onChildAdded(q, s => addMessage(s.key, s.val()));
+  fb.onChildRemoved(q, s => removeMessage(s.key));
+
+  const online = fb.ref(db, "online");
+  const putUser = s => { const d = s.val(); if (d) { users.set(s.key, d); queueUsers(); } };
+  fb.onChildAdded(online, putUser);
+  fb.onChildChanged(online, putUser);
+  fb.onChildRemoved(online, s => { users.delete(s.key); queueUsers(); });
+
+  const typing = fb.ref(db, "typing");
+  const putTyper = s => { if (s.key !== S.uid) { typers.set(s.key, s.val()); queueTyping(); } };
+  fb.onChildAdded(typing, putTyper);
+  fb.onChildChanged(typing, putTyper);
+  fb.onChildRemoved(typing, s => { typers.delete(s.key); queueTyping(); });
+
+  fb.onValue(fb.ref(db, ".info/serverTimeOffset"), s => { S.offset = Number(s.val()) || 0; });
+  fb.onValue(fb.ref(db, ".info/connected"), s => {
+    S.connected = s.val() === true;
+    clearTimeout(S.offlineTimer);
+    if (S.connected) {
+      if (el.status.classList.contains("offline")) showStatus("✅ متصل", "online");
+      S.everConnected = true;
+      onConnected();
+    } else if (!S.paused) {
+      // مهلة قصيرة تمنع وميض "انقطع الاتصال" عند فتح الصفحة أو الانقطاعات اللحظية
+      S.offlineTimer = setTimeout(() => {
+        if (!S.connected && !S.paused) showStatus("⚠️ انقطع الاتصال، جاري إعادة الاتصال...", "offline");
+      }, S.everConnected ? 1500 : 4000);
+    }
+  });
+
+  // إعطاء مفاتيح للرسائل المرحّلة ثم عرض/إرسال المحفوظ
+  outbox.forEach(i => { if (!i.key) i.key = fb.push(fb.ref(db, "messages")).key; });
+  saveOutbox();
+  if (outbox.length) { sys("📦 لديك " + outbox.length + " رسالة بانتظار الإرسال"); flushOutbox(); }
+
+  if (!document.hidden) startTicker();
+  setTimeout(() => sys("💡 اضغط على اسمك في إحدى رسائلك أو في قائمة المتصلين لتغييره"), 1200);
+}
+
+boot();
+</script>
 </body>
 </html>
