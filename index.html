@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#08090c">
 <meta name="color-scheme" content="dark">
 <meta name="robots" content="noindex, nofollow">
@@ -43,11 +43,11 @@ button{-webkit-appearance:none;appearance:none}
 
 /* ===== الرسائل ===== */
 #messages{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:62px 14px 12px;
-  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent;contain:strict}
+  -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:var(--gold-dark) transparent}
 #messages::-webkit-scrollbar{width:5px}
 #messages::-webkit-scrollbar-thumb{background:var(--gold-dark);border-radius:10px}
 .msg{display:flex;align-items:baseline;gap:8px;margin:3px 0;padding:3px 5px;direction:ltr;text-align:left;
-  font-family:var(--mono);font-size:13px;line-height:1.55;overflow-wrap:anywhere;word-break:break-word;contain:content}
+  font-family:var(--mono);font-size:13px;line-height:1.55;overflow-wrap:anywhere;word-break:break-word}
 .msg .user{flex:0 0 auto;color:var(--gold-soft);font-weight:700;direction:rtl;unicode-bidi:plaintext}
 .msg .user[role=button]{cursor:pointer;border-radius:4px}
 .msg .user[role=button]:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -1038,6 +1038,22 @@ function bindUI() {
   el.input.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); sendMessage(); }
   });
+  // الجوال: مقاس الصفحة = المساحة المرئية فعلًا (فوق الكيبورد)، ومنع Safari من تحريك الصفحة كلها عند الكتابة
+  const vv = window.visualViewport;
+  if (vv) {
+    const app = $("app");
+    let fitQueued = false;
+    const fit = () => {
+      fitQueued = false;
+      app.style.height = Math.round(vv.height) + "px";
+      if (window.scrollY || vv.offsetTop) window.scrollTo(0, 0);
+      if (stick) el.messages.scrollTop = el.messages.scrollHeight;
+    };
+    const queueFit = () => { if (!fitQueued) { fitQueued = true; requestAnimationFrame(fit); } };
+    vv.addEventListener("resize", queueFit, { passive: true });
+    vv.addEventListener("scroll", queueFit, { passive: true });
+    fit();
+  }
   el.input.addEventListener("focus", checkAlive);
   el.input.addEventListener("click", () => setTimeout(() => { el.messages.scrollTop = el.messages.scrollHeight; }, 600));
   el.input.addEventListener("blur", stopTyping);
